@@ -2,13 +2,13 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 
 const SimulationCanvas = ({ simulationStateRef, isRunning, params }) => {
     const canvasRef = useRef(null);
-    const tooltipRef = useRef(null); // { show, vx, vy, screenX, screenY }
-    const ballScreenPosRef = useRef({ x: 0, y: 0 }); // track ball screen pos for click detection
+    const tooltipRef = useRef(null);
+    const ballScreenPosRef = useRef({ x: 0, y: 0 });
 
     // Smooth camera refs
     const camRef = useRef({ scale: 1, cx: 10, cy: 5 });
-    // Landing report opacity ref (0→1 fade in, 1→0 fade out)
-    const reportRef = useRef({ opacity: 0, show: false, range: 0, maxHeight: 0, flightTime: 0 });
+    // Landing report opacity ref
+    const reportRef = useRef({ opacity: 0, show: false, range: 0, maxHeight: 0, flightTime: 0, noDragRange: 0, noDragMaxHeight: 0, noDragFlightTime: 0 });
 
     // Click handler for inspecting velocities when paused
     useEffect(() => {
@@ -62,32 +62,37 @@ const SimulationCanvas = ({ simulationStateRef, isRunning, params }) => {
         let animationFrameId;
 
         const PADDING = 60;
-        const BALL_RADIUS = 14; // Bigger ball
-        const LERP_SPEED = 0.06; // Camera interpolation speed
+        const BALL_RADIUS = 14;
+        const LERP_SPEED = 0.06;
 
         const lerp = (a, b, t) => a + (b - a) * t;
 
         const render = () => {
-            const { x: physX, y: physY, vx: curVx, vy: curVy, history } = simulationStateRef.current;
+            const { x: physX, y: physY, vx: curVx, vy: curVy, history, noDragHistory } = simulationStateRef.current;
 
             const W = canvas.width;
             const H = canvas.height;
 
-            // --- Tracking Camera ---
             const drawableW = W - PADDING * 2;
             const drawableH = H - PADDING * 2;
             const isInMotion = history && history.length > 1 && (physY > 0.01 || simulationStateRef.current.t < 0.05);
             const hasLanded = history && history.length > 1 && !isInMotion;
+            const hasDrag = params && params.drag > 0;
 
             let targetScale, targetCX, targetCY;
 
             if (hasLanded) {
-                // After landing — zoom out to show the full trail
+                // Zoom out to show full trail (both trails if drag active)
                 let trailMaxX = Math.max(physX, 10);
                 let trailMaxY = 10;
-                for (let i = 0; i < history.length; i += 3) {
-                    if (history[i].x > trailMaxX) trailMaxX = history[i].x;
-                    if (history[i].y > trailMaxY) trailMaxY = history[i].y;
+                const allHistories = [history];
+                if (noDragHistory && noDragHistory.length > 0) allHistories.push(noDragHistory);
+
+                for (const h of allHistories) {
+                    for (let i = 0; i < h.length; i += 3) {
+                        if (h[i].x > trailMaxX) trailMaxX = h[i].x;
+                        if (h[i].y > trailMaxY) trailMaxY = h[i].y;
+                    }
                 }
                 trailMaxX *= 1.2;
                 trailMaxY *= 1.2;
@@ -95,14 +100,12 @@ const SimulationCanvas = ({ simulationStateRef, isRunning, params }) => {
                 targetCX = trailMaxX / 2;
                 targetCY = trailMaxY / 2;
             } else if (isInMotion) {
-                // In flight — track the ball closely
                 const viewW = params ? Math.max(params.v0 * 1.2, 30) : 40;
                 const viewH = viewW * (drawableH / drawableW);
                 targetScale = Math.min(drawableW / viewW, drawableH / viewH);
                 targetCX = physX;
                 targetCY = Math.max(physY, viewH * 0.3);
             } else {
-                // Idle — show a comfortable default view around origin
                 const defaultView = params ? Math.max(params.v0 * 0.8, 20) : 20;
                 targetScale = drawableW / defaultView;
                 targetCX = defaultView / 2;
@@ -112,12 +115,10 @@ const SimulationCanvas = ({ simulationStateRef, isRunning, params }) => {
             // Smooth camera interpolation
             const cam = camRef.current;
             if (isInMotion) {
-                // During flight, follow tightly (faster lerp)
                 cam.scale = lerp(cam.scale, targetScale, 0.15);
                 cam.cx = lerp(cam.cx, targetCX, 0.15);
                 cam.cy = lerp(cam.cy, targetCY, 0.15);
             } else {
-                // Smooth transition for landing / reset
                 cam.scale = lerp(cam.scale, targetScale, LERP_SPEED);
                 cam.cx = lerp(cam.cx, targetCX, LERP_SPEED);
                 cam.cy = lerp(cam.cy, targetCY, LERP_SPEED);
@@ -127,7 +128,6 @@ const SimulationCanvas = ({ simulationStateRef, isRunning, params }) => {
             const camCenterX = cam.cx;
             const camCenterY = cam.cy;
 
-            // Camera transform: world → canvas
             const camLeft = camCenterX - (drawableW / scale) / 2;
             const camBottom = camCenterY - (drawableH / scale) / 2;
 
@@ -138,7 +138,7 @@ const SimulationCanvas = ({ simulationStateRef, isRunning, params }) => {
             ctx.fillStyle = '#0f172a';
             ctx.fillRect(0, 0, W, H);
 
-            // --- Adaptive Grid (based on visible world range) ---
+            // --- Adaptive Grid ---
             const viewWorldW = drawableW / scale;
             const viewWorldH = drawableH / scale;
             const rawStep = viewWorldW / 8;
@@ -207,9 +207,36 @@ const SimulationCanvas = ({ simulationStateRef, isRunning, params }) => {
             ctx.lineTo(W, originY);
             ctx.stroke();
 
+            // --- No-Drag Ghost Trail (dashed, gray/green) ---
+            if (hasDrag && noDragHistory && noDragHistory.length > 1) {
+                ctx.setLineDash([6, 4]);
+                ctx.strokeStyle = 'rgba(34, 197, 94, 0.35)';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(toCanvasX(noDragHistory[0].x), toCanvasY(noDragHistory[0].y));
+                for (let i = 1; i < noDragHistory.length; i++) {
+                    ctx.lineTo(toCanvasX(noDragHistory[i].x), toCanvasY(noDragHistory[i].y));
+                }
+                ctx.stroke();
+                ctx.setLineDash([]);
 
+                // Landing marker for no-drag
+                const lastND = noDragHistory[noDragHistory.length - 1];
+                if (lastND.y <= 0.01 && hasLanded) {
+                    const ndX = toCanvasX(lastND.x);
+                    const ndY = toCanvasY(0);
+                    ctx.beginPath();
+                    ctx.arc(ndX, ndY, 5, 0, Math.PI * 2);
+                    ctx.fillStyle = 'rgba(34, 197, 94, 0.6)';
+                    ctx.fill();
+                    ctx.fillStyle = 'rgba(34, 197, 94, 0.7)';
+                    ctx.font = '10px sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('No Drag', ndX, ndY - 10);
+                }
+            }
 
-            // --- Trail (ember fade) ---
+            // --- Main Trail (ember fade) ---
             if (history && history.length > 1) {
                 const len = history.length;
                 for (let i = 1; i < len; i++) {
@@ -227,13 +254,12 @@ const SimulationCanvas = ({ simulationStateRef, isRunning, params }) => {
                 }
             }
 
-            // --- Projectile Ball (bigger + shooting star glow) ---
+            // --- Projectile Ball ---
             const ballCX = toCanvasX(physX);
             const ballCY = toCanvasY(physY);
             ballScreenPosRef.current = { x: ballCX, y: ballCY };
 
             if (isInMotion) {
-                // Outer glow halo
                 const outerGlow = ctx.createRadialGradient(ballCX, ballCY, 0, ballCX, ballCY, 50);
                 outerGlow.addColorStop(0, 'rgba(255, 160, 50, 0.4)');
                 outerGlow.addColorStop(0.5, 'rgba(255, 100, 20, 0.15)');
@@ -243,7 +269,6 @@ const SimulationCanvas = ({ simulationStateRef, isRunning, params }) => {
                 ctx.arc(ballCX, ballCY, 50, 0, Math.PI * 2);
                 ctx.fill();
 
-                // Mid glow
                 const midGlow = ctx.createRadialGradient(ballCX, ballCY, 0, ballCX, ballCY, 28);
                 midGlow.addColorStop(0, 'rgba(255, 220, 150, 0.9)');
                 midGlow.addColorStop(0.4, 'rgba(255, 160, 50, 0.5)');
@@ -253,7 +278,6 @@ const SimulationCanvas = ({ simulationStateRef, isRunning, params }) => {
                 ctx.arc(ballCX, ballCY, 28, 0, Math.PI * 2);
                 ctx.fill();
 
-                // Core (white-hot)
                 const coreGlow = ctx.createRadialGradient(ballCX, ballCY, 0, ballCX, ballCY, BALL_RADIUS);
                 coreGlow.addColorStop(0, 'rgba(255, 255, 255, 1)');
                 coreGlow.addColorStop(0.5, 'rgba(255, 230, 180, 0.9)');
@@ -263,7 +287,6 @@ const SimulationCanvas = ({ simulationStateRef, isRunning, params }) => {
                 ctx.arc(ballCX, ballCY, BALL_RADIUS, 0, Math.PI * 2);
                 ctx.fill();
             } else {
-                // Idle / landed — blue ball
                 ctx.beginPath();
                 ctx.arc(ballCX, ballCY, BALL_RADIUS, 0, Math.PI * 2);
                 ctx.fillStyle = '#3b82f6';
@@ -273,7 +296,7 @@ const SimulationCanvas = ({ simulationStateRef, isRunning, params }) => {
                 ctx.shadowBlur = 0;
             }
 
-            // --- Velocity Direction Arrow (main — gold) ---
+            // --- Velocity Arrow (gold) ---
             const lastVx = curVx || 0;
             const lastVy = curVy || 0;
             const speed = Math.sqrt(lastVx * lastVx + lastVy * lastVy);
@@ -288,8 +311,7 @@ const SimulationCanvas = ({ simulationStateRef, isRunning, params }) => {
                 const arrowTipX = ballCX + nx * (startOff + arrowLen);
                 const arrowTipY = ballCY - ny * (startOff + arrowLen);
 
-                // Shaft
-                ctx.strokeStyle = '#fbbf24'; // gold
+                ctx.strokeStyle = '#fbbf24';
                 ctx.lineWidth = 2.5;
                 ctx.setLineDash([]);
                 ctx.beginPath();
@@ -297,25 +319,18 @@ const SimulationCanvas = ({ simulationStateRef, isRunning, params }) => {
                 ctx.lineTo(arrowTipX, arrowTipY);
                 ctx.stroke();
 
-                // Arrowhead
                 const headLen = 10;
                 const angle = Math.atan2(-ny, nx);
                 ctx.fillStyle = '#fbbf24';
                 ctx.beginPath();
                 ctx.moveTo(arrowTipX, arrowTipY);
-                ctx.lineTo(
-                    arrowTipX - headLen * Math.cos(angle - Math.PI / 6),
-                    arrowTipY - headLen * Math.sin(angle - Math.PI / 6)
-                );
-                ctx.lineTo(
-                    arrowTipX - headLen * Math.cos(angle + Math.PI / 6),
-                    arrowTipY - headLen * Math.sin(angle + Math.PI / 6)
-                );
+                ctx.lineTo(arrowTipX - headLen * Math.cos(angle - Math.PI / 6), arrowTipY - headLen * Math.sin(angle - Math.PI / 6));
+                ctx.lineTo(arrowTipX - headLen * Math.cos(angle + Math.PI / 6), arrowTipY - headLen * Math.sin(angle + Math.PI / 6));
                 ctx.closePath();
                 ctx.fill();
             }
 
-            // --- Click-to-inspect: Velocity Component Arrows (when paused) ---
+            // --- Click-to-inspect Velocity Components (paused) ---
             const tip = tooltipRef.current;
             if (tip && tip.show && !isRunning) {
                 const bx = tip.screenX;
@@ -323,91 +338,76 @@ const SimulationCanvas = ({ simulationStateRef, isRunning, params }) => {
                 const vxVal = tip.vx;
                 const vyVal = tip.vy;
                 const maxV = Math.max(Math.abs(vxVal), Math.abs(vyVal), 1);
-                const arrowScale = 100 / maxV; // longer arrows for visibility
+                const arrowScale = 100 / maxV;
                 const headSize = 10;
-                const COMP_COLOR = '#22d3ee'; // cyan for both components
+                const COMP_COLOR = '#22d3ee';
                 const LABEL_COLOR = '#67e8f9';
-                const GAP = BALL_RADIUS + 20; // start arrows away from the ball
+                const GAP = BALL_RADIUS + 20;
 
-                // --- Vx Arrow (horizontal — cyan) ---
                 const vxLen = vxVal * arrowScale;
                 const vxStartX = bx + GAP;
                 const vxStartY = by;
                 if (Math.abs(vxLen) > 3) {
                     const vxTipX = vxStartX + vxLen;
-                    const vxTipY = vxStartY;
-
-                    // Shaft
                     ctx.strokeStyle = COMP_COLOR;
                     ctx.lineWidth = 2.5;
                     ctx.setLineDash([]);
                     ctx.beginPath();
                     ctx.moveTo(vxStartX, vxStartY);
-                    ctx.lineTo(vxTipX, vxTipY);
+                    ctx.lineTo(vxTipX, vxStartY);
                     ctx.stroke();
 
-                    // Arrowhead
                     const dir = vxVal > 0 ? 1 : -1;
                     ctx.fillStyle = COMP_COLOR;
                     ctx.beginPath();
-                    ctx.moveTo(vxTipX, vxTipY);
-                    ctx.lineTo(vxTipX - dir * headSize, vxTipY - headSize * 0.5);
-                    ctx.lineTo(vxTipX - dir * headSize, vxTipY + headSize * 0.5);
+                    ctx.moveTo(vxTipX, vxStartY);
+                    ctx.lineTo(vxTipX - dir * headSize, vxStartY - headSize * 0.5);
+                    ctx.lineTo(vxTipX - dir * headSize, vxStartY + headSize * 0.5);
                     ctx.closePath();
                     ctx.fill();
 
-                    // Label
                     ctx.fillStyle = LABEL_COLOR;
                     ctx.font = 'bold 11px monospace';
                     ctx.textAlign = 'center';
                     ctx.fillText(`Vx: ${vxVal.toFixed(1)} m/s`, vxStartX + vxLen / 2, vxStartY + 18);
                 }
 
-                // --- Vy Arrow (vertical — cyan) ---
                 const vyLen = -vyVal * arrowScale;
                 const vyStartX = bx;
                 const vyStartY = by - GAP;
                 if (Math.abs(vyLen) > 3) {
-                    const vyTipX = vyStartX;
                     const vyTipY = vyStartY + vyLen;
-
-                    // Shaft
                     ctx.strokeStyle = COMP_COLOR;
                     ctx.lineWidth = 2.5;
                     ctx.setLineDash([]);
                     ctx.beginPath();
                     ctx.moveTo(vyStartX, vyStartY);
-                    ctx.lineTo(vyTipX, vyTipY);
+                    ctx.lineTo(vyStartX, vyTipY);
                     ctx.stroke();
 
-                    // Arrowhead
                     const dir = vyLen > 0 ? 1 : -1;
                     ctx.fillStyle = COMP_COLOR;
                     ctx.beginPath();
-                    ctx.moveTo(vyTipX, vyTipY);
-                    ctx.lineTo(vyTipX - headSize * 0.5, vyTipY - dir * headSize);
-                    ctx.lineTo(vyTipX + headSize * 0.5, vyTipY - dir * headSize);
+                    ctx.moveTo(vyStartX, vyTipY);
+                    ctx.lineTo(vyStartX - headSize * 0.5, vyTipY - dir * headSize);
+                    ctx.lineTo(vyStartX + headSize * 0.5, vyTipY - dir * headSize);
                     ctx.closePath();
                     ctx.fill();
 
-                    // Label
                     ctx.fillStyle = LABEL_COLOR;
                     ctx.font = 'bold 11px monospace';
                     ctx.textAlign = 'left';
                     ctx.fillText(`Vy: ${vyVal.toFixed(1)} m/s`, vyStartX + 12, vyStartY + vyLen / 2 + 4);
                 }
 
-                // --- Dashed connection lines (parallelogram hint) ---
                 if (Math.abs(vxLen) > 3 && Math.abs(vyLen) > 3) {
                     ctx.strokeStyle = 'rgba(34, 211, 238, 0.2)';
                     ctx.lineWidth = 1;
                     ctx.setLineDash([4, 4]);
-                    // Connector from ball to Vx start
                     ctx.beginPath();
                     ctx.moveTo(bx, by);
                     ctx.lineTo(vxStartX, vxStartY);
                     ctx.stroke();
-                    // Connector from ball to Vy start
                     ctx.beginPath();
                     ctx.moveTo(bx, by);
                     ctx.lineTo(vyStartX, vyStartY);
@@ -416,50 +416,54 @@ const SimulationCanvas = ({ simulationStateRef, isRunning, params }) => {
                 }
             }
 
-            // --- Landing Report (glassmorphism overlay) ---
+            // --- Landing Report (glassmorphism overlay with drag comparison) ---
             const rpt = reportRef.current;
             if (hasLanded) {
-                // Compute stats once
                 if (!rpt.show) {
-                    let maxH = 0;
-                    let maxX = 0;
-                    let maxT = 0;
+                    let maxH = 0, maxX = 0, maxT = 0;
                     for (let i = 0; i < history.length; i++) {
                         if (history[i].y > maxH) maxH = history[i].y;
                         if (history[i].x > maxX) maxX = history[i].x;
                         if (history[i].t > maxT) maxT = history[i].t;
                     }
+                    let ndMaxH = 0, ndMaxX = 0, ndMaxT = 0;
+                    if (noDragHistory && noDragHistory.length > 0) {
+                        for (let i = 0; i < noDragHistory.length; i++) {
+                            if (noDragHistory[i].y > ndMaxH) ndMaxH = noDragHistory[i].y;
+                            if (noDragHistory[i].x > ndMaxX) ndMaxX = noDragHistory[i].x;
+                            if (noDragHistory[i].t > ndMaxT) ndMaxT = noDragHistory[i].t;
+                        }
+                    }
                     rpt.show = true;
                     rpt.range = maxX;
                     rpt.maxHeight = maxH;
                     rpt.flightTime = maxT;
+                    rpt.noDragRange = ndMaxX;
+                    rpt.noDragMaxHeight = ndMaxH;
+                    rpt.noDragFlightTime = ndMaxT;
                 }
-                // Fade in
                 rpt.opacity = Math.min(1, rpt.opacity + 0.025);
             } else if (!hasLanded && rpt.show) {
-                // Fade out on reset
                 rpt.opacity = Math.max(0, rpt.opacity - 0.04);
-                if (rpt.opacity <= 0) {
-                    rpt.show = false;
-                }
+                if (rpt.opacity <= 0) rpt.show = false;
             } else if (!hasLanded && !isInMotion) {
-                // Idle — make sure it's off
                 rpt.opacity = Math.max(0, rpt.opacity - 0.04);
                 if (rpt.opacity <= 0) rpt.show = false;
             }
 
             if (rpt.opacity > 0.01) {
                 const alpha = rpt.opacity;
-                const cardW = 260;
-                const cardH = 150;
+                const showComparison = hasDrag && rpt.noDragRange > 0;
+                const cardW = showComparison ? 340 : 260;
+                const cardH = showComparison ? 230 : 150;
                 const cardX = W / 2 - cardW / 2;
                 const cardY = H / 2 - cardH / 2 - 30;
 
                 ctx.save();
                 ctx.globalAlpha = alpha;
 
-                // Card background (glassmorphism)
-                ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+                // Card background
+                ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
                 const r = 16;
                 ctx.beginPath();
                 ctx.moveTo(cardX + r, cardY);
@@ -474,7 +478,7 @@ const SimulationCanvas = ({ simulationStateRef, isRunning, params }) => {
                 ctx.closePath();
                 ctx.fill();
 
-                // Card border (subtle glow)
+                // Card border
                 ctx.strokeStyle = 'rgba(59, 130, 246, 0.4)';
                 ctx.lineWidth = 1.5;
                 ctx.stroke();
@@ -485,7 +489,7 @@ const SimulationCanvas = ({ simulationStateRef, isRunning, params }) => {
                 ctx.textAlign = 'center';
                 ctx.fillText('🎯 Flight Report', W / 2, cardY + 30);
 
-                // Divider line
+                // Divider
                 ctx.strokeStyle = 'rgba(100, 116, 139, 0.3)';
                 ctx.lineWidth = 1;
                 ctx.beginPath();
@@ -493,28 +497,146 @@ const SimulationCanvas = ({ simulationStateRef, isRunning, params }) => {
                 ctx.lineTo(cardX + cardW - 20, cardY + 42);
                 ctx.stroke();
 
-                // Stats
-                const stats = [
-                    { label: 'Range (X)', value: `${rpt.range.toFixed(1)} m`, color: '#3b82f6' },
-                    { label: 'Max Height', value: `${rpt.maxHeight.toFixed(1)} m`, color: '#a855f7' },
-                    { label: 'Flight Time', value: `${rpt.flightTime.toFixed(2)} s`, color: '#22d3ee' },
-                ];
-
-                stats.forEach((stat, idx) => {
-                    const sy = cardY + 62 + idx * 30;
-
-                    // Label
+                if (showComparison) {
+                    // Column headers
+                    ctx.font = 'bold 10px sans-serif';
                     ctx.fillStyle = '#94a3b8';
-                    ctx.font = '12px sans-serif';
                     ctx.textAlign = 'left';
-                    ctx.fillText(stat.label, cardX + 25, sy);
+                    ctx.fillText('Metric', cardX + 20, cardY + 58);
+                    ctx.textAlign = 'center';
+                    ctx.fillStyle = '#f87171'; // red = with drag
+                    ctx.fillText('With Drag', cardX + cardW * 0.50, cardY + 58);
+                    ctx.fillStyle = '#4ade80'; // green = no drag
+                    ctx.fillText('No Drag', cardX + cardW * 0.72, cardY + 58);
+                    ctx.fillStyle = '#fbbf24'; // gold = impact
+                    ctx.fillText('Impact', cardX + cardW - 30, cardY + 58);
 
-                    // Value
-                    ctx.fillStyle = stat.color;
-                    ctx.font = 'bold 14px monospace';
-                    ctx.textAlign = 'right';
-                    ctx.fillText(stat.value, cardX + cardW - 25, sy);
-                });
+                    // Thin header line
+                    ctx.strokeStyle = 'rgba(100, 116, 139, 0.2)';
+                    ctx.beginPath();
+                    ctx.moveTo(cardX + 20, cardY + 64);
+                    ctx.lineTo(cardX + cardW - 20, cardY + 64);
+                    ctx.stroke();
+
+                    const stats = [
+                        {
+                            label: 'Range',
+                            drag: rpt.range,
+                            noDrag: rpt.noDragRange,
+                            unit: 'm',
+                        },
+                        {
+                            label: 'Max Height',
+                            drag: rpt.maxHeight,
+                            noDrag: rpt.noDragMaxHeight,
+                            unit: 'm',
+                        },
+                        {
+                            label: 'Flight Time',
+                            drag: rpt.flightTime,
+                            noDrag: rpt.noDragFlightTime,
+                            unit: 's',
+                        },
+                    ];
+
+                    stats.forEach((s, idx) => {
+                        const sy = cardY + 84 + idx * 32;
+                        const pctDiff = s.noDrag !== 0
+                            ? ((s.drag - s.noDrag) / s.noDrag * 100)
+                            : 0;
+
+                        // Row label
+                        ctx.fillStyle = '#94a3b8';
+                        ctx.font = '12px sans-serif';
+                        ctx.textAlign = 'left';
+                        ctx.fillText(s.label, cardX + 20, sy);
+
+                        // With drag value
+                        ctx.fillStyle = '#f87171';
+                        ctx.font = 'bold 12px monospace';
+                        ctx.textAlign = 'center';
+                        ctx.fillText(`${s.drag.toFixed(1)} ${s.unit}`, cardX + cardW * 0.50, sy);
+
+                        // No drag value
+                        ctx.fillStyle = '#4ade80';
+                        ctx.fillText(`${s.noDrag.toFixed(1)} ${s.unit}`, cardX + cardW * 0.72, sy);
+
+                        // Impact percentage
+                        const impactColor = pctDiff < -1 ? '#f87171' : pctDiff > 1 ? '#4ade80' : '#94a3b8';
+                        ctx.fillStyle = impactColor;
+                        ctx.font = 'bold 12px monospace';
+                        ctx.textAlign = 'right';
+                        const sign = pctDiff > 0 ? '+' : '';
+                        ctx.fillText(`${sign}${pctDiff.toFixed(1)}%`, cardX + cardW - 16, sy);
+                    });
+
+                    // Summary
+                    const rangeLoss = rpt.noDragRange > 0
+                        ? ((rpt.noDragRange - rpt.range) / rpt.noDragRange * 100).toFixed(1)
+                        : '0';
+                    ctx.fillStyle = '#64748b';
+                    ctx.font = '11px sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(
+                        `Air resistance reduced range by ${rangeLoss}%`,
+                        W / 2,
+                        cardY + cardH - 20
+                    );
+                } else {
+                    // Simple report (no drag comparison)
+                    const stats = [
+                        { label: 'Range (X)', value: `${rpt.range.toFixed(1)} m`, color: '#3b82f6' },
+                        { label: 'Max Height', value: `${rpt.maxHeight.toFixed(1)} m`, color: '#a855f7' },
+                        { label: 'Flight Time', value: `${rpt.flightTime.toFixed(2)} s`, color: '#22d3ee' },
+                    ];
+
+                    stats.forEach((stat, idx) => {
+                        const sy = cardY + 62 + idx * 30;
+                        ctx.fillStyle = '#94a3b8';
+                        ctx.font = '12px sans-serif';
+                        ctx.textAlign = 'left';
+                        ctx.fillText(stat.label, cardX + 25, sy);
+                        ctx.fillStyle = stat.color;
+                        ctx.font = 'bold 14px monospace';
+                        ctx.textAlign = 'right';
+                        ctx.fillText(stat.value, cardX + cardW - 25, sy);
+                    });
+                }
+
+                ctx.restore();
+            }
+
+            // --- Legend (when drag is active) ---
+            if (hasDrag && history && history.length > 1) {
+                ctx.save();
+                ctx.globalAlpha = 0.8;
+                const lx = W - 160;
+                const ly = 20;
+
+                // Solid line = with drag
+                ctx.strokeStyle = '#3b82f6';
+                ctx.lineWidth = 2;
+                ctx.setLineDash([]);
+                ctx.beginPath();
+                ctx.moveTo(lx, ly);
+                ctx.lineTo(lx + 24, ly);
+                ctx.stroke();
+                ctx.fillStyle = '#94a3b8';
+                ctx.font = '10px sans-serif';
+                ctx.textAlign = 'left';
+                ctx.fillText('With Air Resistance', lx + 30, ly + 4);
+
+                // Dashed line = no drag
+                ctx.strokeStyle = 'rgba(34, 197, 94, 0.6)';
+                ctx.lineWidth = 2;
+                ctx.setLineDash([6, 4]);
+                ctx.beginPath();
+                ctx.moveTo(lx, ly + 18);
+                ctx.lineTo(lx + 24, ly + 18);
+                ctx.stroke();
+                ctx.setLineDash([]);
+                ctx.fillStyle = '#94a3b8';
+                ctx.fillText('Without (Vacuum)', lx + 30, ly + 22);
 
                 ctx.restore();
             }
@@ -533,7 +655,6 @@ const SimulationCanvas = ({ simulationStateRef, isRunning, params }) => {
             animationFrameId = requestAnimationFrame(render);
         };
 
-        // Handle resize
         const resize = () => {
             const parent = canvas.parentElement;
             if (parent) {
