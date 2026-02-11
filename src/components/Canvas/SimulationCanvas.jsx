@@ -253,36 +253,39 @@ const SimulationCanvas = ({ simulationStateRef, isRunning, params }) => {
                 ctx.shadowBlur = 0;
             }
 
-            // --- Velocity Direction Arrow ---
+            // --- Velocity Direction Arrow (main — gold) ---
             const lastVx = curVx || 0;
             const lastVy = curVy || 0;
             const speed = Math.sqrt(lastVx * lastVx + lastVy * lastVy);
 
             if (speed > 0.5 && history && history.length > 1) {
-                const nx = lastVx / speed; // normalized direction
+                const nx = lastVx / speed;
                 const ny = lastVy / speed;
-                const arrowLen = 45; // px length of arrow
-                const arrowTipX = ballCX + nx * arrowLen;
-                const arrowTipY = ballCY - ny * arrowLen; // -ny because canvas Y is inverted
+                const arrowLen = 50;
+                const startOff = BALL_RADIUS + 6;
+                const startX = ballCX + nx * startOff;
+                const startY = ballCY - ny * startOff;
+                const arrowTipX = ballCX + nx * (startOff + arrowLen);
+                const arrowTipY = ballCY - ny * (startOff + arrowLen);
 
-                // Arrow shaft
-                ctx.strokeStyle = '#22d3ee';
+                // Shaft
+                ctx.strokeStyle = '#fbbf24'; // gold
                 ctx.lineWidth = 2.5;
                 ctx.setLineDash([]);
                 ctx.beginPath();
-                ctx.moveTo(ballCX + nx * (BALL_RADIUS + 4), ballCY - ny * (BALL_RADIUS + 4));
+                ctx.moveTo(startX, startY);
                 ctx.lineTo(arrowTipX, arrowTipY);
                 ctx.stroke();
 
-                // Arrowhead triangle
+                // Arrowhead
                 const headLen = 10;
-                const angle = Math.atan2(-ny, nx); // canvas angle
-                ctx.fillStyle = '#22d3ee';
+                const angle = Math.atan2(-ny, nx);
+                ctx.fillStyle = '#fbbf24';
                 ctx.beginPath();
                 ctx.moveTo(arrowTipX, arrowTipY);
                 ctx.lineTo(
                     arrowTipX - headLen * Math.cos(angle - Math.PI / 6),
-                    arrowTipY - headLen * Math.sin(angle - Math.PI / 6) // note: canvas Y
+                    arrowTipY - headLen * Math.sin(angle - Math.PI / 6)
                 );
                 ctx.lineTo(
                     arrowTipX - headLen * Math.cos(angle + Math.PI / 6),
@@ -292,39 +295,105 @@ const SimulationCanvas = ({ simulationStateRef, isRunning, params }) => {
                 ctx.fill();
             }
 
-            // --- Click-to-inspect Tooltip (when paused) ---
+            // --- Click-to-inspect: Velocity Component Arrows (when paused) ---
             const tip = tooltipRef.current;
             if (tip && tip.show && !isRunning) {
-                const tx = tip.screenX + 20;
-                const ty = tip.screenY - 50;
-                const boxW = 130;
-                const boxH = 52;
+                const bx = tip.screenX;
+                const by = tip.screenY;
+                const vxVal = tip.vx;
+                const vyVal = tip.vy;
+                const maxV = Math.max(Math.abs(vxVal), Math.abs(vyVal), 1);
+                const arrowScale = 100 / maxV; // longer arrows for visibility
+                const headSize = 10;
+                const COMP_COLOR = '#22d3ee'; // cyan for both components
+                const LABEL_COLOR = '#67e8f9';
+                const GAP = BALL_RADIUS + 20; // start arrows away from the ball
 
-                // Tooltip background
-                ctx.fillStyle = 'rgba(15, 23, 42, 0.92)';
-                ctx.strokeStyle = '#22d3ee';
-                ctx.lineWidth = 1.5;
-                ctx.beginPath();
-                ctx.roundRect(tx, ty, boxW, boxH, 8);
-                ctx.fill();
-                ctx.stroke();
+                // --- Vx Arrow (horizontal — cyan) ---
+                const vxLen = vxVal * arrowScale;
+                const vxStartX = bx + GAP;
+                const vxStartY = by;
+                if (Math.abs(vxLen) > 3) {
+                    const vxTipX = vxStartX + vxLen;
+                    const vxTipY = vxStartY;
 
-                // Tooltip text
-                ctx.fillStyle = '#e2e8f0';
-                ctx.font = 'bold 12px monospace';
-                ctx.textAlign = 'left';
-                ctx.fillText(`Vx: ${tip.vx.toFixed(2)} m/s`, tx + 10, ty + 20);
-                ctx.fillText(`Vy: ${tip.vy.toFixed(2)} m/s`, tx + 10, ty + 40);
+                    // Shaft
+                    ctx.strokeStyle = COMP_COLOR;
+                    ctx.lineWidth = 2.5;
+                    ctx.setLineDash([]);
+                    ctx.beginPath();
+                    ctx.moveTo(vxStartX, vxStartY);
+                    ctx.lineTo(vxTipX, vxTipY);
+                    ctx.stroke();
 
-                // Connector line from tooltip to ball
-                ctx.strokeStyle = 'rgba(34, 211, 238, 0.4)';
-                ctx.lineWidth = 1;
-                ctx.setLineDash([3, 3]);
-                ctx.beginPath();
-                ctx.moveTo(tx, ty + boxH / 2);
-                ctx.lineTo(tip.screenX, tip.screenY);
-                ctx.stroke();
-                ctx.setLineDash([]);
+                    // Arrowhead
+                    const dir = vxVal > 0 ? 1 : -1;
+                    ctx.fillStyle = COMP_COLOR;
+                    ctx.beginPath();
+                    ctx.moveTo(vxTipX, vxTipY);
+                    ctx.lineTo(vxTipX - dir * headSize, vxTipY - headSize * 0.5);
+                    ctx.lineTo(vxTipX - dir * headSize, vxTipY + headSize * 0.5);
+                    ctx.closePath();
+                    ctx.fill();
+
+                    // Label
+                    ctx.fillStyle = LABEL_COLOR;
+                    ctx.font = 'bold 11px monospace';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(`Vx: ${vxVal.toFixed(1)} m/s`, vxStartX + vxLen / 2, vxStartY + 18);
+                }
+
+                // --- Vy Arrow (vertical — cyan) ---
+                const vyLen = -vyVal * arrowScale;
+                const vyStartX = bx;
+                const vyStartY = by - GAP;
+                if (Math.abs(vyLen) > 3) {
+                    const vyTipX = vyStartX;
+                    const vyTipY = vyStartY + vyLen;
+
+                    // Shaft
+                    ctx.strokeStyle = COMP_COLOR;
+                    ctx.lineWidth = 2.5;
+                    ctx.setLineDash([]);
+                    ctx.beginPath();
+                    ctx.moveTo(vyStartX, vyStartY);
+                    ctx.lineTo(vyTipX, vyTipY);
+                    ctx.stroke();
+
+                    // Arrowhead
+                    const dir = vyLen > 0 ? 1 : -1;
+                    ctx.fillStyle = COMP_COLOR;
+                    ctx.beginPath();
+                    ctx.moveTo(vyTipX, vyTipY);
+                    ctx.lineTo(vyTipX - headSize * 0.5, vyTipY - dir * headSize);
+                    ctx.lineTo(vyTipX + headSize * 0.5, vyTipY - dir * headSize);
+                    ctx.closePath();
+                    ctx.fill();
+
+                    // Label
+                    ctx.fillStyle = LABEL_COLOR;
+                    ctx.font = 'bold 11px monospace';
+                    ctx.textAlign = 'left';
+                    ctx.fillText(`Vy: ${vyVal.toFixed(1)} m/s`, vyStartX + 12, vyStartY + vyLen / 2 + 4);
+                }
+
+                // --- Dashed connection lines (parallelogram hint) ---
+                if (Math.abs(vxLen) > 3 && Math.abs(vyLen) > 3) {
+                    ctx.strokeStyle = 'rgba(34, 211, 238, 0.2)';
+                    ctx.lineWidth = 1;
+                    ctx.setLineDash([4, 4]);
+                    // Connector from ball to Vx start
+                    ctx.beginPath();
+                    ctx.moveTo(bx, by);
+                    ctx.lineTo(vxStartX, vxStartY);
+                    ctx.stroke();
+                    // Connector from ball to Vy start
+                    ctx.beginPath();
+                    ctx.moveTo(bx, by);
+                    ctx.lineTo(vyStartX, vyStartY);
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+                }
             }
 
             // --- Axis Labels ---
