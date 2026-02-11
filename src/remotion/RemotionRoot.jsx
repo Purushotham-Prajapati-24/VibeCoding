@@ -7,12 +7,18 @@ import React from 'react';
 import { Composition } from 'remotion';
 import SimulationComposition from './SimulationComposition';
 import ReplayComposition from './ReplayComposition';
+import DualReplayComposition from './DualReplayComposition';
 
 const defaultProps = {
     v0: 50,
     angle: 45,
     gravity: 9.81,
     drag: 0,
+};
+
+const dualDefaultProps = {
+    paramsA: { v0: 50, angle: 45, gravity: 9.81, drag: 0, label: '🌍 Earth' },
+    paramsB: { v0: 50, angle: 45, gravity: 1.62, drag: 0, label: '🌙 Moon' },
 };
 
 export const RemotionRoot = () => {
@@ -35,6 +41,15 @@ export const RemotionRoot = () => {
                 width={1280}
                 height={720}
                 defaultProps={defaultProps}
+            />
+            <Composition
+                id="DualCompareReplay"
+                component={DualReplayComposition}
+                durationInFrames={300}
+                fps={30}
+                width={1100}
+                height={380}
+                defaultProps={dualDefaultProps}
             />
         </>
     );
