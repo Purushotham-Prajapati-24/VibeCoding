@@ -5,6 +5,11 @@ const SimulationCanvas = ({ simulationStateRef, isRunning, params }) => {
     const tooltipRef = useRef(null); // { show, vx, vy, screenX, screenY }
     const ballScreenPosRef = useRef({ x: 0, y: 0 }); // track ball screen pos for click detection
 
+    // Smooth camera refs
+    const camRef = useRef({ scale: 1, cx: 10, cy: 5 });
+    // Landing report opacity ref (0→1 fade in, 1→0 fade out)
+    const reportRef = useRef({ opacity: 0, show: false, range: 0, maxHeight: 0, flightTime: 0 });
+
     // Click handler for inspecting velocities when paused
     useEffect(() => {
         const canvas = canvasRef.current;
@@ -58,6 +63,9 @@ const SimulationCanvas = ({ simulationStateRef, isRunning, params }) => {
 
         const PADDING = 60;
         const BALL_RADIUS = 14; // Bigger ball
+        const LERP_SPEED = 0.06; // Camera interpolation speed
+
+        const lerp = (a, b, t) => a + (b - a) * t;
 
         const render = () => {
             const { x: physX, y: physY, vx: curVx, vy: curVy, history } = simulationStateRef.current;
@@ -65,51 +73,75 @@ const SimulationCanvas = ({ simulationStateRef, isRunning, params }) => {
             const W = canvas.width;
             const H = canvas.height;
 
-            // --- Dynamic Camera ---
-            let maxX = Math.max(physX, 10);
-            let maxY = Math.max(physY, 10);
-
-            // Include predicted trajectory extent in camera
-            if (params) {
-                const rad = (params.angle * Math.PI) / 180;
-                const vy0 = params.v0 * Math.sin(rad);
-                const vx0 = params.v0 * Math.cos(rad);
-                const g = params.gravity;
-                const totalT = (2 * vy0) / g;
-                const range = vx0 * totalT;
-                const apex = (vy0 * vy0) / (2 * g);
-                maxX = Math.max(maxX, range);
-                maxY = Math.max(maxY, apex);
-            }
-
-            if (history && history.length > 0) {
-                for (let i = 0; i < history.length; i += 3) {
-                    if (history[i].x > maxX) maxX = history[i].x;
-                    if (history[i].y > maxY) maxY = history[i].y;
-                }
-            }
-
-            maxX *= 1.15;
-            maxY *= 1.15;
-
+            // --- Tracking Camera ---
             const drawableW = W - PADDING * 2;
             const drawableH = H - PADDING * 2;
-            const scaleX = drawableW / maxX;
-            const scaleY = drawableH / maxY;
-            const scale = Math.min(scaleX, scaleY);
+            const isInMotion = history && history.length > 1 && (physY > 0.01 || simulationStateRef.current.t < 0.05);
+            const hasLanded = history && history.length > 1 && !isInMotion;
 
-            const originX = PADDING;
-            const originY = H - PADDING;
+            let targetScale, targetCX, targetCY;
 
-            const toCanvasX = (wx) => originX + wx * scale;
-            const toCanvasY = (wy) => originY - wy * scale;
+            if (hasLanded) {
+                // After landing — zoom out to show the full trail
+                let trailMaxX = Math.max(physX, 10);
+                let trailMaxY = 10;
+                for (let i = 0; i < history.length; i += 3) {
+                    if (history[i].x > trailMaxX) trailMaxX = history[i].x;
+                    if (history[i].y > trailMaxY) trailMaxY = history[i].y;
+                }
+                trailMaxX *= 1.2;
+                trailMaxY *= 1.2;
+                targetScale = Math.min(drawableW / trailMaxX, drawableH / trailMaxY);
+                targetCX = trailMaxX / 2;
+                targetCY = trailMaxY / 2;
+            } else if (isInMotion) {
+                // In flight — track the ball closely
+                const viewW = params ? Math.max(params.v0 * 1.2, 30) : 40;
+                const viewH = viewW * (drawableH / drawableW);
+                targetScale = Math.min(drawableW / viewW, drawableH / viewH);
+                targetCX = physX;
+                targetCY = Math.max(physY, viewH * 0.3);
+            } else {
+                // Idle — show a comfortable default view around origin
+                const defaultView = params ? Math.max(params.v0 * 0.8, 20) : 20;
+                targetScale = drawableW / defaultView;
+                targetCX = defaultView / 2;
+                targetCY = defaultView * (drawableH / drawableW) / 2;
+            }
+
+            // Smooth camera interpolation
+            const cam = camRef.current;
+            if (isInMotion) {
+                // During flight, follow tightly (faster lerp)
+                cam.scale = lerp(cam.scale, targetScale, 0.15);
+                cam.cx = lerp(cam.cx, targetCX, 0.15);
+                cam.cy = lerp(cam.cy, targetCY, 0.15);
+            } else {
+                // Smooth transition for landing / reset
+                cam.scale = lerp(cam.scale, targetScale, LERP_SPEED);
+                cam.cx = lerp(cam.cx, targetCX, LERP_SPEED);
+                cam.cy = lerp(cam.cy, targetCY, LERP_SPEED);
+            }
+
+            const scale = cam.scale;
+            const camCenterX = cam.cx;
+            const camCenterY = cam.cy;
+
+            // Camera transform: world → canvas
+            const camLeft = camCenterX - (drawableW / scale) / 2;
+            const camBottom = camCenterY - (drawableH / scale) / 2;
+
+            const toCanvasX = (wx) => PADDING + (wx - camLeft) * scale;
+            const toCanvasY = (wy) => (H - PADDING) - (wy - camBottom) * scale;
 
             // --- Clear ---
             ctx.fillStyle = '#0f172a';
             ctx.fillRect(0, 0, W, H);
 
-            // --- Adaptive Grid ---
-            const rawStep = maxX / 8;
+            // --- Adaptive Grid (based on visible world range) ---
+            const viewWorldW = drawableW / scale;
+            const viewWorldH = drawableH / scale;
+            const rawStep = viewWorldW / 8;
             const magnitude = Math.pow(10, Math.floor(Math.log10(rawStep)));
             const nice = [1, 2, 5, 10];
             let gridStep = magnitude;
@@ -118,18 +150,25 @@ const SimulationCanvas = ({ simulationStateRef, isRunning, params }) => {
             }
             if (gridStep < 1) gridStep = 1;
 
+            const worldLeft = camLeft;
+            const worldRight = camLeft + viewWorldW;
+            const worldBottom = camBottom;
+            const worldTop = camBottom + viewWorldH;
+
             ctx.strokeStyle = '#1e293b';
             ctx.lineWidth = 1;
             ctx.setLineDash([]);
 
-            for (let wx = 0; wx <= maxX; wx += gridStep) {
+            const startWx = Math.floor(worldLeft / gridStep) * gridStep;
+            for (let wx = startWx; wx <= worldRight; wx += gridStep) {
                 const cx = toCanvasX(wx);
                 ctx.beginPath();
                 ctx.moveTo(cx, 0);
                 ctx.lineTo(cx, H);
                 ctx.stroke();
             }
-            for (let wy = 0; wy <= maxY; wy += gridStep) {
+            const startWy = Math.floor(worldBottom / gridStep) * gridStep;
+            for (let wy = startWy; wy <= worldTop; wy += gridStep) {
                 const cy = toCanvasY(wy);
                 ctx.beginPath();
                 ctx.moveTo(0, cy);
@@ -140,13 +179,23 @@ const SimulationCanvas = ({ simulationStateRef, isRunning, params }) => {
             // --- Grid Labels ---
             ctx.fillStyle = '#475569';
             ctx.font = '10px monospace';
+            const originY = toCanvasY(0);
             ctx.textAlign = 'center';
-            for (let wx = gridStep; wx <= maxX; wx += gridStep) {
-                ctx.fillText(`${Math.round(wx)}m`, toCanvasX(wx), originY + 16);
+            for (let wx = startWx; wx <= worldRight; wx += gridStep) {
+                if (wx === 0) continue;
+                const cx = toCanvasX(wx);
+                if (cx > PADDING && cx < W - 10) {
+                    ctx.fillText(`${Math.round(wx)}m`, cx, Math.min(originY + 16, H - 5));
+                }
             }
             ctx.textAlign = 'right';
-            for (let wy = gridStep; wy <= maxY; wy += gridStep) {
-                ctx.fillText(`${Math.round(wy)}m`, originX - 8, toCanvasY(wy) + 4);
+            const originX = toCanvasX(0);
+            for (let wy = startWy; wy <= worldTop; wy += gridStep) {
+                if (wy === 0) continue;
+                const cy = toCanvasY(wy);
+                if (cy > 10 && cy < H - PADDING) {
+                    ctx.fillText(`${Math.round(wy)}m`, Math.max(originX - 8, 35), cy + 4);
+                }
             }
 
             // --- Ground Line ---
@@ -158,48 +207,19 @@ const SimulationCanvas = ({ simulationStateRef, isRunning, params }) => {
             ctx.lineTo(W, originY);
             ctx.stroke();
 
-            // --- Dotted Predicted Trajectory ---
-            if (params) {
-                const rad = (params.angle * Math.PI) / 180;
-                const vy0 = params.v0 * Math.sin(rad);
-                const vx0 = params.v0 * Math.cos(rad);
-                const g = params.gravity;
-                const totalT = (2 * vy0) / g;
-                const steps = 80;
-                const dt = totalT / steps;
 
-                ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
-                ctx.lineWidth = 1.5;
-                ctx.setLineDash([6, 5]);
-                ctx.beginPath();
-
-                for (let i = 0; i <= steps; i++) {
-                    const t = i * dt;
-                    const px = vx0 * t;
-                    const py = vy0 * t - 0.5 * g * t * t;
-                    const cx = toCanvasX(px);
-                    const cy = toCanvasY(Math.max(py, 0));
-                    if (i === 0) ctx.moveTo(cx, cy);
-                    else ctx.lineTo(cx, cy);
-                }
-                ctx.stroke();
-                ctx.setLineDash([]);
-            }
-
-            // --- Determine if ball is in flight ---
-            const isInFlight = history && history.length > 1 && (physY > 0.01 || simulationStateRef.current.t < 0.05);
 
             // --- Trail (ember fade) ---
             if (history && history.length > 1) {
                 const len = history.length;
                 for (let i = 1; i < len; i++) {
                     const age = (len - i) / len;
-                    const alpha = isInFlight ? Math.max(0, 0.6 - age * 0.6) : 0.25;
-                    const r = isInFlight ? 255 : 59;
-                    const g = isInFlight ? Math.round(165 - age * 100) : 130;
-                    const b = isInFlight ? Math.round(50 - age * 50) : 246;
+                    const alpha = isInMotion ? Math.max(0, 0.6 - age * 0.6) : 0.25;
+                    const r = isInMotion ? 255 : 59;
+                    const g = isInMotion ? Math.round(165 - age * 100) : 130;
+                    const b = isInMotion ? Math.round(50 - age * 50) : 246;
                     ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, ${alpha})`;
-                    ctx.lineWidth = isInFlight ? Math.max(1, 3 * (1 - age)) : 2;
+                    ctx.lineWidth = isInMotion ? Math.max(1, 3 * (1 - age)) : 2;
                     ctx.beginPath();
                     ctx.moveTo(toCanvasX(history[i - 1].x), toCanvasY(history[i - 1].y));
                     ctx.lineTo(toCanvasX(history[i].x), toCanvasY(history[i].y));
@@ -212,7 +232,7 @@ const SimulationCanvas = ({ simulationStateRef, isRunning, params }) => {
             const ballCY = toCanvasY(physY);
             ballScreenPosRef.current = { x: ballCX, y: ballCY };
 
-            if (isInFlight) {
+            if (isInMotion) {
                 // Outer glow halo
                 const outerGlow = ctx.createRadialGradient(ballCX, ballCY, 0, ballCX, ballCY, 50);
                 outerGlow.addColorStop(0, 'rgba(255, 160, 50, 0.4)');
@@ -394,6 +414,109 @@ const SimulationCanvas = ({ simulationStateRef, isRunning, params }) => {
                     ctx.stroke();
                     ctx.setLineDash([]);
                 }
+            }
+
+            // --- Landing Report (glassmorphism overlay) ---
+            const rpt = reportRef.current;
+            if (hasLanded) {
+                // Compute stats once
+                if (!rpt.show) {
+                    let maxH = 0;
+                    let maxX = 0;
+                    let maxT = 0;
+                    for (let i = 0; i < history.length; i++) {
+                        if (history[i].y > maxH) maxH = history[i].y;
+                        if (history[i].x > maxX) maxX = history[i].x;
+                        if (history[i].t > maxT) maxT = history[i].t;
+                    }
+                    rpt.show = true;
+                    rpt.range = maxX;
+                    rpt.maxHeight = maxH;
+                    rpt.flightTime = maxT;
+                }
+                // Fade in
+                rpt.opacity = Math.min(1, rpt.opacity + 0.025);
+            } else if (!hasLanded && rpt.show) {
+                // Fade out on reset
+                rpt.opacity = Math.max(0, rpt.opacity - 0.04);
+                if (rpt.opacity <= 0) {
+                    rpt.show = false;
+                }
+            } else if (!hasLanded && !isInMotion) {
+                // Idle — make sure it's off
+                rpt.opacity = Math.max(0, rpt.opacity - 0.04);
+                if (rpt.opacity <= 0) rpt.show = false;
+            }
+
+            if (rpt.opacity > 0.01) {
+                const alpha = rpt.opacity;
+                const cardW = 260;
+                const cardH = 150;
+                const cardX = W / 2 - cardW / 2;
+                const cardY = H / 2 - cardH / 2 - 30;
+
+                ctx.save();
+                ctx.globalAlpha = alpha;
+
+                // Card background (glassmorphism)
+                ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+                const r = 16;
+                ctx.beginPath();
+                ctx.moveTo(cardX + r, cardY);
+                ctx.lineTo(cardX + cardW - r, cardY);
+                ctx.quadraticCurveTo(cardX + cardW, cardY, cardX + cardW, cardY + r);
+                ctx.lineTo(cardX + cardW, cardY + cardH - r);
+                ctx.quadraticCurveTo(cardX + cardW, cardY + cardH, cardX + cardW - r, cardY + cardH);
+                ctx.lineTo(cardX + r, cardY + cardH);
+                ctx.quadraticCurveTo(cardX, cardY + cardH, cardX, cardY + cardH - r);
+                ctx.lineTo(cardX, cardY + r);
+                ctx.quadraticCurveTo(cardX, cardY, cardX + r, cardY);
+                ctx.closePath();
+                ctx.fill();
+
+                // Card border (subtle glow)
+                ctx.strokeStyle = 'rgba(59, 130, 246, 0.4)';
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+
+                // Title
+                ctx.fillStyle = '#e2e8f0';
+                ctx.font = 'bold 15px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('🎯 Flight Report', W / 2, cardY + 30);
+
+                // Divider line
+                ctx.strokeStyle = 'rgba(100, 116, 139, 0.3)';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(cardX + 20, cardY + 42);
+                ctx.lineTo(cardX + cardW - 20, cardY + 42);
+                ctx.stroke();
+
+                // Stats
+                const stats = [
+                    { label: 'Range (X)', value: `${rpt.range.toFixed(1)} m`, color: '#3b82f6' },
+                    { label: 'Max Height', value: `${rpt.maxHeight.toFixed(1)} m`, color: '#a855f7' },
+                    { label: 'Flight Time', value: `${rpt.flightTime.toFixed(2)} s`, color: '#22d3ee' },
+                ];
+
+                stats.forEach((stat, idx) => {
+                    const sy = cardY + 62 + idx * 30;
+
+                    // Label
+                    ctx.fillStyle = '#94a3b8';
+                    ctx.font = '12px sans-serif';
+                    ctx.textAlign = 'left';
+                    ctx.fillText(stat.label, cardX + 25, sy);
+
+                    // Value
+                    ctx.fillStyle = stat.color;
+                    ctx.font = 'bold 14px monospace';
+                    ctx.textAlign = 'right';
+                    ctx.fillText(stat.value, cardX + cardW - 25, sy);
+                });
+
+                ctx.restore();
             }
 
             // --- Axis Labels ---

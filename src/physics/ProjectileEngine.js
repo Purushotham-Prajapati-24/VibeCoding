@@ -13,7 +13,7 @@ export class ProjectileEngine {
         this.landingPoint = null;
     }
 
-    initialize(v0, angleDeg, gravity) {
+    initialize(v0, angleDeg, gravity, dragCoefficient = 0) {
         this.reset();
         const angleRad = (angleDeg * Math.PI) / 180;
         this.vx = v0 * Math.cos(angleRad);
@@ -21,19 +21,30 @@ export class ProjectileEngine {
         this.g = gravity;
         this.v0 = v0;
         this.angleRad = angleRad;
+        this.cd = dragCoefficient; // quadratic drag coefficient (dimensionless, simplified)
 
         // Push initial state
         this.history.push({ t: 0, x: 0, y: 0, vx: this.vx, vy: this.vy });
     }
 
     step(dt) {
-        // Basic Euler integration for now (sufficient for simple projectile)
-        // x = x + vx * dt
-        // vy = vy - g * dt
-        // y = y + vy * dt
+        // Apply quadratic air drag: a_drag = -Cd * |v| * v (simplified model)
+        // This gives deceleration proportional to v² in the direction opposing motion
+        const speed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
 
+        let ax = 0;
+        let ay = -this.g;
+
+        if (this.cd > 0 && speed > 0.001) {
+            // Drag acceleration opposes velocity
+            ax -= this.cd * speed * this.vx;
+            ay -= this.cd * speed * this.vy;
+        }
+
+        // Semi-implicit Euler (velocity first, then position) — more stable than basic Euler
+        this.vx += ax * dt;
+        this.vy += ay * dt;
         this.x += this.vx * dt;
-        this.vy -= this.g * dt;
         this.y += this.vy * dt;
         this.t += dt;
 
@@ -41,17 +52,11 @@ export class ProjectileEngine {
         if (this.y < 0) {
             this.y = 0;
             this.landingPoint = this.x;
-            // Stop simulation in a real engine, or bounce. 
-            // For this educational tool, we usually stop or just clamp.
-            // Let's bounce with damping for fun? 
-            // User said "continuously bouncing" was a bug, so let's STOP at ground for now to be precise.
             this.vx = 0;
             this.vy = 0;
         }
 
-        // Record history for graphs
-        // We don't want to record EVERY frame for charts (too much data), maybe every 5th frame?
-        // handled by consumer or just record all for now.
+        // Record history
         this.history.push({
             t: this.t,
             x: this.x,

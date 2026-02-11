@@ -37,7 +37,6 @@ const App = () => {
             onStart={start}
             onPause={pause}
             onReset={reset}
-            onMoon={() => setParams(p => ({ ...p, gravity: 1.62 }))}
             params={params}
             setParams={setParams}
             isRunning={isRunning}
