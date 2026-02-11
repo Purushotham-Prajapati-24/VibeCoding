@@ -4,6 +4,8 @@ import {
     SlidersHorizontal, ChevronDown, Sun, Moon, Orbit, Sparkles,
     CircleDot, Star, Wind
 } from 'lucide-react';
+import ReplayButton from '../Remotion/ReplayButton';
+import ExplanationVideoButton from '../Remotion/ExplanationVideoButton';
 
 const PLANETS = [
     { name: 'Mercury', gravity: 3.7, drag: 0, icon: CircleDot, color: 'text-gray-400' },
@@ -17,7 +19,7 @@ const PLANETS = [
     { name: 'Neptune', gravity: 11.15, drag: 0.55, icon: Globe, color: 'text-indigo-400' },
 ];
 
-const ControlPanel = ({ onStart, onPause, onReset, params, setParams, isRunning }) => {
+const ControlPanel = ({ onStart, onPause, onReset, params, setParams, isRunning, hasLanded, onReplay, onExplain }) => {
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const dropdownRef = useRef(null);
 
@@ -161,8 +163,8 @@ const ControlPanel = ({ onStart, onPause, onReset, params, setParams, isRunning 
                                             key={p.name}
                                             onClick={() => handlePlanetSelect(p)}
                                             className={`w-full px-3 py-2 text-sm text-left flex items-center gap-2.5 transition-colors cursor-pointer ${isSelected
-                                                    ? 'bg-cyan-600/20 text-cyan-300'
-                                                    : 'text-slate-300 hover:bg-slate-700'
+                                                ? 'bg-cyan-600/20 text-cyan-300'
+                                                : 'text-slate-300 hover:bg-slate-700'
                                                 }`}
                                         >
                                             <Icon size={16} className={p.color} />
@@ -192,6 +194,12 @@ const ControlPanel = ({ onStart, onPause, onReset, params, setParams, isRunning 
                 <button className="flex items-center justify-center gap-2 bg-slate-700 hover:bg-slate-600 text-white py-2 px-4 rounded-xl transition-all font-medium" onClick={onReset}>
                     <RotateCcw size={18} /> Reset
                 </button>
+            </div>
+
+            {/* Remotion Video Buttons */}
+            <div className="flex flex-col gap-2 pt-2 border-t border-slate-700/50">
+                <ReplayButton onClick={onReplay} disabled={!hasLanded} />
+                <ExplanationVideoButton onClick={onExplain} />
             </div>
         </div>
     );

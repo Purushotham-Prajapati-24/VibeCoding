@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { ProjectileEngine } from '../physics/ProjectileEngine';
+import { ProjectileEngine } from '../physics/projectileRealtimeEngine';
 
 const usePhysicsSimulation = () => {
     const [params, setParams] = useState({
