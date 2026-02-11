@@ -85,13 +85,14 @@ const WorldSVG = ({ params, totalFrames, frame, label, color }) => {
     );
 };
 
-export const DualReplayComposition = () => {
+export const DualReplayComposition = ({ paramsA: propParamsA, paramsB: propParamsB }) => {
     const frame = useCurrentFrame();
     const { fps, durationInFrames } = useVideoConfig();
-    const { paramsA, paramsB } = (typeof window !== 'undefined' && window.__REMOTION_COMP_PROPS) || {
-        paramsA: { v0: 50, angle: 45, gravity: 9.81, drag: 0, label: '🌍 Earth' },
-        paramsB: { v0: 50, angle: 45, gravity: 1.62, drag: 0, label: '🌙 Moon' },
-    };
+
+    // Use props if available, otherwise fallback to window (for Studio/preview)
+    const windowProps = (typeof window !== 'undefined' && window.__REMOTION_COMP_PROPS) || {};
+    const paramsA = propParamsA || windowProps.paramsA || { v0: 50, angle: 45, gravity: 9.81, drag: 0, label: '🌍 Earth' };
+    const paramsB = propParamsB || windowProps.paramsB || { v0: 50, angle: 45, gravity: 1.62, drag: 0, label: '🌙 Moon' };
 
     return (
         <div style={{ display: 'flex', gap: 8, padding: 8, background: '#020617' }}>

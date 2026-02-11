@@ -1,8 +1,8 @@
 import React from 'react';
-import { Atom, GitCompare, Eye, Lightbulb, Crosshair } from 'lucide-react';
+import { Atom, GitCompare, Eye, Lightbulb, Crosshair, Maximize2 } from 'lucide-react';
 import JuryMode from '@/modes/JuryMode';
 
-const MainLayout = ({ children, ctx, onChallenge }) => {
+const MainLayout = ({ children, ctx, onChallenge, onFullscreen }) => {
     return (
         <div className="min-h-screen bg-[#0f172a] text-slate-200 p-4 font-sans overflow-hidden flex flex-col">
             <header className="mb-3 px-2 flex items-center justify-between">
@@ -26,6 +26,21 @@ const MainLayout = ({ children, ctx, onChallenge }) => {
                             <GitCompare size={12} />
                             Compare
                         </button>
+
+                        {/* Fullscreen Compare Mode */}
+                        {onFullscreen && (
+                            <button
+                                onClick={() => {
+                                    if (!ctx.compareMode) ctx.setCompareMode(true);
+                                    onFullscreen();
+                                }}
+                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-blue-600/20 text-blue-400 hover:bg-blue-600/30 transition-all border border-blue-500/30"
+                                title="Open Fullscreen Lab"
+                            >
+                                <Maximize2 size={12} />
+                                Maximize
+                            </button>
+                        )}
 
                         {/* Concept Overlay Toggle */}
                         <button

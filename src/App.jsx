@@ -11,6 +11,7 @@ import DualReplayComposition from '@/remotion/DualReplayComposition';
 import { estimateFlightTime } from '@/physics/projectileFrameEngine';
 import { CompareProvider, useCompareContext } from '@/compare/CompareContext';
 import CompareLayout from '@/compare/CompareLayout';
+import ComparePage from '@/pages/ComparePage';
 import ConceptOverlay from '@/overlays/ConceptOverlay';
 import SpotlightOverlay from '@/overlays/SpotlightOverlay';
 import ChallengeMode from '@/modes/ChallengeMode';
@@ -24,16 +25,22 @@ const AppInner = () => {
     single, compare,
   } = ctx;
 
+  const [viewMode, setViewMode] = useState('dashboard');
+
+  // Determine effective mode (Compare Page forces compare functionality)
+  const isEffectiveCompare = compareMode || viewMode === 'compare-fullscreen';
+
   // Active params / state based on mode
-  const params = compareMode ? compare.paramsA : single.params;
-  const setParams = compareMode ? compare.setParamsA : single.setParams;
-  const simulationStateRef = compareMode ? compare.stateA : single.simulationStateRef;
+  const params = isEffectiveCompare ? compare.paramsA : single.params;
+  const setParams = isEffectiveCompare ? compare.setParamsA : single.setParams;
+  const simulationStateRef = isEffectiveCompare ? compare.stateA : single.simulationStateRef;
 
   // Remotion modal state
   const [modalOpen, setModalOpen] = useState(false);
   const [activeComposition, setActiveComposition] = useState(null);
   const [compositionTitle, setCompositionTitle] = useState('');
   const [compositionDuration, setCompositionDuration] = useState(180);
+  const [compositionInputProps, setCompositionInputProps] = useState({});
   const [challengeOpen, setChallengeOpen] = useState(false);
 
   // Determine if simulation has landed
@@ -42,39 +49,39 @@ const AppInner = () => {
     simulationStateRef.current.history.length > 10 &&
     (simulationStateRef.current.y || 0) <= 0.01;
 
-  const compositionProps = {
-    v0: params.v0,
-    angle: params.angle,
-    gravity: params.gravity,
-    drag: params.drag,
-  };
-
   const openReplay = useCallback(() => {
-    if (compareMode) {
+    if (isEffectiveCompare) {
       // Dual replay
       setActiveComposition(() => DualReplayComposition);
+      setCompositionInputProps({
+        paramsA: params,
+        paramsB: compare.paramsB
+      });
       setCompositionTitle('🎬 Compare Replay');
       setCompositionDuration(300);
     } else {
       const flightTime = estimateFlightTime(params.v0, params.angle, params.gravity);
       const totalFrames = Math.ceil((flightTime + 1) * 30);
       setActiveComposition(() => SimulationComposition);
+      setCompositionInputProps({ ...params });
       setCompositionTitle('🎬 Cinematic Replay');
       setCompositionDuration(totalFrames);
     }
     setModalOpen(true);
-  }, [params, compareMode]);
+  }, [params, isEffectiveCompare, compare.paramsB]);
 
   const openExplanation = useCallback(() => {
     setActiveComposition(() => ReplayComposition);
+    setCompositionInputProps({ ...params });
     setCompositionTitle('🎓 Physics Walkthrough');
     setCompositionDuration(360);
     setModalOpen(true);
-  }, []);
+  }, [params]);
 
   const closeModal = useCallback(() => {
     setModalOpen(false);
     setActiveComposition(null);
+    setCompositionInputProps({});
   }, []);
 
   // Build the single canvas element for non-compare mode
@@ -106,8 +113,19 @@ const AppInner = () => {
     />
   );
 
-  return (
-    <MainLayout ctx={ctx} onChallenge={() => setChallengeOpen(true)}>
+  const layout = viewMode === 'compare-fullscreen' ? (
+    <ComparePage
+      onBack={() => setViewMode('dashboard')}
+      onReplay={openReplay}
+      onExplain={openExplanation}
+      hasLanded={hasLanded}
+    />
+  ) : (
+    <MainLayout
+      ctx={ctx}
+      onChallenge={() => setChallengeOpen(true)}
+      onFullscreen={() => setViewMode('compare-fullscreen')}
+    >
       {/* Top Row: 3 Columns */}
       <div className="col-span-12 grid grid-cols-12 gap-4 h-[65%]">
         {/* Left Panel: Live Analytics */}
@@ -135,6 +153,11 @@ const AppInner = () => {
             hasLanded={hasLanded}
             onReplay={openReplay}
             onExplain={openExplanation}
+            // Compare Mode Props
+            compareMode={compareMode}
+            paramsB={compareMode ? compare.paramsB : null}
+            setParamsB={compareMode ? compare.setParamsB : null}
+            setSharedParams={compareMode ? compare.setSharedParams : null}
           />
         </div>
       </div>
@@ -143,18 +166,22 @@ const AppInner = () => {
       <div className="col-span-12 h-[32%]">
         {graphElement}
       </div>
+    </MainLayout>
+  );
 
-      {/* Modals */}
+  return (
+    <>
+      {layout}
       <RemotionPlayerModal
         isOpen={modalOpen}
         onClose={closeModal}
         composition={activeComposition}
-        compositionProps={compositionProps}
+        compositionProps={compositionInputProps}
         title={compositionTitle}
         durationInFrames={compositionDuration}
       />
       <ChallengeMode isOpen={challengeOpen} onClose={() => setChallengeOpen(false)} />
-    </MainLayout>
+    </>
   );
 };
 

@@ -60,7 +60,7 @@ const DifferencePanel = () => {
     ] : [];
 
     return (
-        <div className="bg-slate-800/50 backdrop-blur-sm rounded-2xl border border-slate-700 p-4 shadow-xl">
+        <div className="bg-slate-900/60 backdrop-blur-md rounded-2xl border border-white/5 p-4 shadow-2xl ring-1 ring-white/10">
             <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5 mb-3">
                 <BarChart3 size={14} className="text-cyan-400" />
                 Difference Meter
@@ -79,7 +79,7 @@ const DifferencePanel = () => {
                                 <AnimatedValue value={r.b} suffix={r.unit} />
                             </span>
                             <span className={`flex items-center gap-0.5 font-bold w-16 text-right font-mono ${Math.abs(r.pct) < 0.5 ? 'text-slate-500' :
-                                    r.pct > 0 ? 'text-emerald-400' : 'text-red-400'
+                                r.pct > 0 ? 'text-emerald-400' : 'text-red-400'
                                 }`}>
                                 <DiffIndicator pct={r.pct} />
                                 <AnimatedValue value={Math.abs(r.pct)} suffix="%" decimals={0} />

@@ -7,6 +7,7 @@ const usePhysicsSimulation = () => {
         angle: 45,
         gravity: 9.81,
         drag: 0, // drag coefficient (0 = off)
+        label: 'Earth',
     });
 
     const [isRunning, setIsRunning] = useState(false);
