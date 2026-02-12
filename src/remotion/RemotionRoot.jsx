@@ -8,6 +8,8 @@ import { Composition } from 'remotion';
 import SimulationComposition from './SimulationComposition';
 import ReplayComposition from './ReplayComposition';
 import DualReplayComposition from './DualReplayComposition';
+import HeroTeaserComposition from './HeroTeaserComposition';
+import ShowcaseComposition from './ShowcaseComposition';
 
 const defaultProps = {
     v0: 50,
@@ -24,6 +26,22 @@ const dualDefaultProps = {
 export const RemotionRoot = () => {
     return (
         <>
+            <Composition
+                id="HeroTeaser"
+                component={HeroTeaserComposition}
+                durationInFrames={150}
+                fps={30}
+                width={1280}
+                height={720}
+            />
+            <Composition
+                id="PhysicsShowcase"
+                component={ShowcaseComposition}
+                durationInFrames={300}
+                fps={30}
+                width={1280}
+                height={720}
+            />
             <Composition
                 id="CinematicReplay"
                 component={SimulationComposition}

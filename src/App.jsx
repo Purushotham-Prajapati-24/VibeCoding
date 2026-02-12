@@ -11,9 +11,11 @@ import DualReplayComposition from '@/remotion/DualReplayComposition';
 import { estimateFlightTime } from '@/physics/projectileFrameEngine';
 import { CompareProvider, useCompareContext } from '@/compare/CompareContext';
 import CompareLayout from '@/compare/CompareLayout';
-import ComparePage from '@/pages/ComparePage';
+import Home from '@/pages/Home';
+import Explore from '@/pages/Explore';
 import ConceptOverlay from '@/overlays/ConceptOverlay';
 import SpotlightOverlay from '@/overlays/SpotlightOverlay';
+import ComparePage from '@/pages/ComparePage';
 import ChallengeMode from '@/modes/ChallengeMode';
 import JuryMode from '@/modes/JuryMode';
 
@@ -25,7 +27,7 @@ const AppInner = () => {
     single, compare,
   } = ctx;
 
-  const [viewMode, setViewMode] = useState('dashboard');
+  const [viewMode, setViewMode] = useState('home');
 
   // Determine effective mode (Compare Page forces compare functionality)
   const isEffectiveCompare = compareMode || viewMode === 'compare-fullscreen';
@@ -168,6 +170,25 @@ const AppInner = () => {
       </div>
     </MainLayout>
   );
+
+  // Main Navigation / Routing Switch
+  if (viewMode === 'home') {
+    return (
+      <Home
+        onContinue={() => setViewMode('explore')}
+        onDashboard={() => setViewMode('dashboard')}
+      />
+    );
+  }
+
+  if (viewMode === 'explore') {
+    return (
+      <Explore
+        onBack={() => setViewMode('home')}
+        onEnterLab={() => setViewMode('dashboard')}
+      />
+    );
+  }
 
   return (
     <>
