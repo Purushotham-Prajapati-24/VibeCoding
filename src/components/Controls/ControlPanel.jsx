@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import {
     Play, Pause, RotateCcw, Globe, Zap, Compass, ArrowDown,
     SlidersHorizontal, ChevronDown, Sun, Moon, Orbit, Sparkles,
-    CircleDot, Star, Wind
+    CircleDot, Star, Wind, Film
 } from 'lucide-react';
 import ReplayButton from '../Remotion/ReplayButton';
 import ExplanationVideoButton from '../Remotion/ExplanationVideoButton';
@@ -23,7 +23,7 @@ const ControlPanel = ({
     onStart, onPause, onReset,
     params, setParams,
     isRunning, hasLanded,
-    onReplay, onExplain,
+    onReplay, onExplain, onReel,
     // Compare Mode Props
     compareMode, paramsB, setParamsB, setSharedParams
 }) => {
@@ -295,6 +295,15 @@ const ControlPanel = ({
             <div className="flex flex-col gap-2 pt-2 border-t border-slate-700/50">
                 <ReplayButton onClick={onReplay} disabled={!hasLanded} />
                 <ExplanationVideoButton onClick={onExplain} />
+
+                <button
+                    onClick={onReel}
+                    disabled={!hasLanded}
+                    className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl font-medium transition-all bg-gradient-to-r from-pink-900/50 to-purple-900/50 hover:from-pink-900/70 hover:to-purple-900/70 text-pink-200 border border-pink-500/30 disabled:opacity-50 disabled:cursor-not-allowed group"
+                >
+                    <Film size={16} className="group-hover:scale-110 transition-transform" />
+                    <span>Create Viral Reel</span>
+                </button>
             </div>
         </div>
     );

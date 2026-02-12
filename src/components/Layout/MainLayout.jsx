@@ -1,8 +1,11 @@
 import React from 'react';
 import { Atom, GitCompare, Eye, Lightbulb, Crosshair, Maximize2 } from 'lucide-react';
 import JuryMode from '@/modes/JuryMode';
+import { useTutor } from '@/tutor/TutorContext';
+import { BrainCircuit, LineChart } from 'lucide-react';
 
 const MainLayout = ({ children, ctx, onChallenge, onFullscreen }) => {
+    const { setMode, mode } = useTutor();
     return (
         <div className="min-h-screen bg-[#0f172a] text-slate-200 p-4 font-sans overflow-hidden flex flex-col">
             <header className="mb-3 px-2 flex items-center justify-between">
@@ -76,6 +79,25 @@ const MainLayout = ({ children, ctx, onChallenge, onFullscreen }) => {
                                 Challenge
                             </button>
                         )}
+
+                        {/* AI Tutor Controls */}
+                        <div className="h-6 w-px bg-slate-700 mx-1" />
+
+                        <button
+                            onClick={() => setMode('quiz')}
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-indigo-500/20 text-indigo-300 hover:bg-indigo-500/30 border border-indigo-500/30 transition-all"
+                        >
+                            <BrainCircuit size={12} />
+                            Predict
+                        </button>
+
+                        <button
+                            onClick={() => setMode(mode === 'dashboard' ? 'simulation' : 'dashboard')}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${mode === 'dashboard' ? 'bg-blue-600 text-white' : 'bg-slate-700/50 text-slate-400'}`}
+                        >
+                            <LineChart size={12} />
+                            Analytics
+                        </button>
 
                         {/* Jury Demo */}
                         <JuryMode />

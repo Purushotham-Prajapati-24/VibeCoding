@@ -10,6 +10,7 @@ import ReplayComposition from './ReplayComposition';
 import DualReplayComposition from './DualReplayComposition';
 import HeroTeaserComposition from './HeroTeaserComposition';
 import ShowcaseComposition from './ShowcaseComposition';
+import ConceptExplainerComposition from './ConceptExplainerComposition';
 
 const defaultProps = {
     v0: 50,
@@ -68,6 +69,15 @@ export const RemotionRoot = () => {
                 width={1100}
                 height={380}
                 defaultProps={dualDefaultProps}
+            />
+            <Composition
+                id="ConceptExplainer"
+                component={ConceptExplainerComposition}
+                durationInFrames={300}
+                fps={30}
+                width={1280}
+                height={720}
+                defaultProps={defaultProps}
             />
         </>
     );

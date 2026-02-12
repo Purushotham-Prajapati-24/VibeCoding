@@ -8,13 +8,18 @@ import RemotionPlayerModal from '@/components/Remotion/RemotionPlayerModal';
 import SimulationComposition from '@/remotion/SimulationComposition';
 import ReplayComposition from '@/remotion/ReplayComposition';
 import DualReplayComposition from '@/remotion/DualReplayComposition';
+import ConceptExplainerComposition from '@/remotion/ConceptExplainerComposition';
 import { estimateFlightTime } from '@/physics/projectileFrameEngine';
 import { useCompareContext } from '@/compare/CompareContext';
 import CompareLayout from '@/compare/CompareLayout';
 import ConceptOverlay from '@/overlays/ConceptOverlay';
 import SpotlightOverlay from '@/overlays/SpotlightOverlay';
-import ChallengeMode from '@/modes/ChallengeMode';
+import ChallengeMode from '@/challenges/ChallengeMode';
 import { useNavigate } from 'react-router-dom';
+import PredictionMode from '@/tutor/PredictionMode';
+import LearningDashboard from '@/tutor/LearningDashboard';
+import { useTutor } from '@/tutor/TutorContext';
+import ReelGenerator from '@/reels/ReelGenerator';
 
 const Lab = () => {
     const navigate = useNavigate();
@@ -24,6 +29,7 @@ const Lab = () => {
         isRunning, start, pause, reset,
         single, compare,
     } = ctx;
+    const { mode: tutorMode } = useTutor();
 
     // Remotion modal state
     const [modalOpen, setModalOpen] = useState(false);
@@ -32,6 +38,7 @@ const Lab = () => {
     const [compositionDuration, setCompositionDuration] = useState(180);
     const [compositionInputProps, setCompositionInputProps] = useState({});
     const [challengeOpen, setChallengeOpen] = useState(false);
+    const [reelOpen, setReelOpen] = useState(false);
 
     // Active params / state based on mode
     const isEffectiveCompare = compareMode; // logic simplified as ComparePage is separate route
@@ -67,10 +74,10 @@ const Lab = () => {
     }, [params, isEffectiveCompare, compare.paramsB]);
 
     const openExplanation = useCallback(() => {
-        setActiveComposition(() => ReplayComposition);
-        setCompositionInputProps({ ...params });
-        setCompositionTitle('🎓 Physics Walkthrough');
-        setCompositionDuration(360);
+        setActiveComposition(() => ConceptExplainerComposition);
+        setCompositionInputProps({ params });
+        setCompositionTitle('🧠 AI Concept Explainer');
+        setCompositionDuration(450); // Longer for explanation
         setModalOpen(true);
     }, [params]);
 
@@ -148,6 +155,7 @@ const Lab = () => {
                             paramsB={compareMode ? compare.paramsB : null}
                             setParamsB={compareMode ? compare.setParamsB : null}
                             setSharedParams={compareMode ? compare.setSharedParams : null}
+                            onReel={() => setReelOpen(true)}
                         />
                     </div>
                 </div>
@@ -165,7 +173,17 @@ const Lab = () => {
                 title={compositionTitle}
                 durationInFrames={compositionDuration}
             />
-            <ChallengeMode isOpen={challengeOpen} onClose={() => setChallengeOpen(false)} />
+            <ChallengeMode
+                isOpen={challengeOpen}
+                onClose={() => setChallengeOpen(false)}
+                onApplyParams={(newParams) => {
+                    setParams(prev => ({ ...prev, ...newParams }));
+                    setChallengeOpen(false);
+                }}
+            />
+            <PredictionMode />
+            <ReelGenerator isOpen={reelOpen} onClose={() => setReelOpen(false)} params={params} />
+            {tutorMode === 'dashboard' && <LearningDashboard />}
         </>
     );
 };

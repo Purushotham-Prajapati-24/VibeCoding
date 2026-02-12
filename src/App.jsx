@@ -1,6 +1,7 @@
 import React from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { CompareProvider } from '@/compare/CompareContext';
+import { TutorProvider } from '@/tutor/TutorContext';
 import Home from '@/pages/Home';
 import Explore from '@/pages/Explore';
 import Lab from '@/pages/Lab';
@@ -23,10 +24,15 @@ const AppInner = () => {
   );
 };
 
+import NewtonAI from '@/components/AI/NewtonAI';
+
 const App = () => (
-  <CompareProvider>
-    <AppInner />
-  </CompareProvider>
+  <TutorProvider>
+    <CompareProvider>
+      <NewtonAI />
+      <AppInner />
+    </CompareProvider>
+  </TutorProvider>
 );
 
 export default App;
