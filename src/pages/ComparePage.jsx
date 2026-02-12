@@ -6,7 +6,7 @@ import DualCanvasView from '../compare/DualCanvasView';
 import DifferencePanel from '../compare/DifferencePanel';
 import DataCardPanel from '../components/DataCards/DataCardPanel';
 
-const ComparePage = ({ onBack }) => {
+const ComparePage = ({ onBack, onReplay, onExplain, hasLanded }) => {
     const ctx = useCompareContext();
     const {
         compareMode, isRunning, start, pause, reset, compare
@@ -38,8 +38,8 @@ const ComparePage = ({ onBack }) => {
                         <button
                             onClick={isRunning ? pause : start}
                             className={`p-2 rounded-md transition-colors flex items-center gap-2 ${isRunning
-                                    ? 'bg-amber-500/20 text-amber-500 hover:bg-amber-500/30'
-                                    : 'bg-emerald-500/20 text-emerald-500 hover:bg-emerald-500/30'
+                                ? 'bg-amber-500/20 text-amber-500 hover:bg-amber-500/30'
+                                : 'bg-emerald-500/20 text-emerald-500 hover:bg-emerald-500/30'
                                 }`}
                         >
                             {isRunning ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
@@ -90,20 +90,23 @@ const ComparePage = ({ onBack }) => {
                                 onPause={pause}
                                 onReset={reset}
                                 isRunning={isRunning}
-                                hasLanded={false}
+                                hasLanded={hasLanded}
+                                onReplay={onReplay}
+                                onExplain={onExplain}
                             />
                         </div>
                     </div>
                 </div>
 
-                {/* Main Canvas Area (9 cols) */}
-                <div className="col-span-9 flex flex-col h-full bg-slate-900/40 rounded-2xl border border-slate-700/50 overflow-hidden relative shadow-2xl backdrop-blur-sm">
-                    <div className="flex-1 relative w-full h-full">
-                        <DualCanvasView />
-
-                        {/* Floating Difference Panel */}
-                        <div className="absolute top-[10vh] bottom-6 left-1/2 -translate-x-1/2 w-auto min-w-[320px] max-w-2xl px-4">
+                {/* Main Canvas Area (9 cols) - Fixed Height 90vh */}
+                <div className="col-span-9 flex flex-col h-[90vh] bg-slate-900/40 rounded-2xl border border-slate-700/50 overflow-hidden relative shadow-2xl backdrop-blur-sm justify-center">
+                    <div className="w-full aspect-[2.2/1] max-h-full relative px-2">
+                        <div className="absolute top-4 left-1/2 -translate-x-1/2 w-auto min-w-[320px] max-w-2xl px-4 z-20">
                             <DifferencePanel />
+                        </div>
+
+                        <div className="w-full h-full">
+                            <DualCanvasView />
                         </div>
                     </div>
                 </div>

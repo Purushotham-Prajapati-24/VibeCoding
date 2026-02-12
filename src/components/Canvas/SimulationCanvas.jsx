@@ -674,7 +674,7 @@ const SimulationCanvas = ({ simulationStateRef, isRunning, params }) => {
     }, [simulationStateRef, isRunning, params]);
 
     return (
-        <div className="relative w-full h-full bg-slate-900 rounded-2xl overflow-hidden border border-slate-700 shadow-inner">
+        <div className="relative w-full h-[90vh] bg-slate-900 rounded-2xl overflow-hidden border border-slate-700 shadow-inner">
             <div className="absolute top-4 right-4 bg-slate-800/80 backdrop-blur px-3 py-1 rounded-full text-xs text-slate-400 border border-slate-700 pointer-events-none select-none z-10">
                 Canvas: Active
             </div>
