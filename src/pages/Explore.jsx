@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { Player } from '@remotion/player';
 import { Play, Activity, FlaskConical, ChevronDown, ArrowLeft } from 'lucide-react';
-import ShowcaseComposition from '../remotion/ShowcaseComposition';
+import ShowcaseComposition from '@/features/video/ShowcaseComposition';
 import Navbar from '../components/Navbar';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';

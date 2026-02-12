@@ -3,7 +3,7 @@
  * DOM overlay with pointer-events: none.
  */
 import React, { useState, useEffect, useRef } from 'react';
-import { detectMoments, checkNearMoment } from '../analytics/peakDetector';
+import { detectMoments, checkNearMoment } from '@/features/analytics/peakDetector';
 
 const SpotlightOverlay = ({ simulationStateRef, isRunning, enabled }) => {
     const [activeMoment, setActiveMoment] = useState(null);

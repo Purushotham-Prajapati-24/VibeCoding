@@ -1,7 +1,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { ProjectileEngine } from '../physics/projectileRealtimeEngine';
-import { PendulumRealtimeEngine } from '../experiments/physics/PendulumRealtimeEngine';
+import { ProjectileEngine } from '@/services/physics/projectileRealtimeEngine';
+import { PendulumRealtimeEngine } from '@/features/experiments/physics/PendulumRealtimeEngine';
 
 const ENGINE_MAP = {
     'projectile': ProjectileEngine,

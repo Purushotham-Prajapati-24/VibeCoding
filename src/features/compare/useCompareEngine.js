@@ -7,7 +7,7 @@
  * (critical for JuryMode's setTimeout chain).
  */
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { ProjectileEngine } from '../physics/projectileRealtimeEngine';
+import { ProjectileEngine } from '@/services/physics/projectileRealtimeEngine';
 
 
 

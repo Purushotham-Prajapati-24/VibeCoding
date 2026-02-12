@@ -1,9 +1,9 @@
 import React, { useState, useCallback } from 'react';
 import { ArrowLeft, Play, Pause, RotateCcw, Activity, Settings2 } from 'lucide-react';
-import { useCompareContext } from '../compare/CompareContext';
+import { useCompareContext } from '@/features/compare/CompareContext';
 import ControlPanel from '../components/Controls/ControlPanel';
-import DualCanvasView from '../compare/DualCanvasView';
-import DifferencePanel from '../compare/DifferencePanel';
+import DualCanvasView from '@/features/compare/DualCanvasView';
+import DifferencePanel from '@/features/compare/DifferencePanel';
 import DataCardPanel from '../components/DataCards/DataCardPanel';
 
 const ComparePage = ({ onBack, onReplay, onExplain, hasLanded }) => {

@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTutor } from './TutorContext';
-import { useScenario } from '../context/StructuredScenarioContext';
-import { analyzeMisconception } from '../ai/misconceptionEngine';
-import { getExplanation } from '../ai/adaptiveEngine';
+import { useScenario } from '@/context/StructuredScenarioContext';
+import { analyzeMisconception } from '@/services/ai/misconceptionEngine';
+import { getExplanation } from '@/services/ai/adaptiveEngine';
 import { Check, X, ArrowRight, BrainCircuit } from 'lucide-react';
 
 const PREDICTION_TYPES = [
@@ -98,8 +98,8 @@ const QuizEngine = ({ onComplete }) => {
                                 key={type.id}
                                 onClick={() => !submitted && setTargetVar(type)}
                                 className={`text-xs px-2 py-1 rounded-md transition-colors ${targetVar.id === type.id
-                                        ? 'bg-indigo-600 text-white'
-                                        : 'bg-slate-800 text-slate-400 hover:text-white'
+                                    ? 'bg-indigo-600 text-white'
+                                    : 'bg-slate-800 text-slate-400 hover:text-white'
                                     }`}
                                 disabled={submitted}
                             >

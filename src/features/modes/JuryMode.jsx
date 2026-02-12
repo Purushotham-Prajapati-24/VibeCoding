@@ -3,7 +3,7 @@
  * Ctrl+J or button to trigger.
  */
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { useCompareContext } from '../compare/CompareContext';
+import { useCompareContext } from '@/features/compare/CompareContext';
 import { Presentation, Square } from 'lucide-react';
 
 const SEQUENCE = [
@@ -82,8 +82,8 @@ const JuryMode = ({ onOpenReplay, onOpenExplain }) => {
             <button
                 onClick={runSequence}
                 className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${isActive
-                        ? 'bg-red-600 hover:bg-red-500 text-white'
-                        : 'bg-slate-700/50 hover:bg-slate-600/50 text-slate-400'
+                    ? 'bg-red-600 hover:bg-red-500 text-white'
+                    : 'bg-slate-700/50 hover:bg-slate-600/50 text-slate-400'
                     }`}
                 title="Ctrl+J for Jury Demo"
             >

@@ -4,7 +4,7 @@
  */
 import React from 'react';
 import { useCurrentFrame, useVideoConfig, interpolate } from 'remotion';
-import { computeStateAtTime, computeFullTrajectory } from '../physics/projectileFrameEngine';
+import { computeStateAtTime, computeFullTrajectory } from '@/services/physics/projectileFrameEngine';
 
 const W = 540;
 const H = 360;

@@ -1,15 +1,15 @@
 import React from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import { CompareProvider } from '@/compare/CompareContext';
-import { TutorProvider } from '@/tutor/TutorContext';
+import { CompareProvider } from '@/features/compare/CompareContext';
+import { TutorProvider } from '@/features/tutor/TutorContext';
 import { ScenarioProvider } from '@/context/StructuredScenarioContext';
 import { SoundProvider } from '@/components/Audio/SoundManager.jsx';
 import Home from '@/pages/Home';
 import Explore from '@/pages/Explore';
 import Lab from '@/pages/Lab';
-import ExperimentLayout from '@/experiments/ExperimentLayout';
+import ExperimentLayout from '@/features/experiments/ExperimentLayout';
 import ComparePage from '@/pages/ComparePage';
-import ResearchDashboard from '@/research/ResearchDashboard';
+import ResearchDashboard from '@/features/research/ResearchDashboard';
 import { AnimatePresence } from 'framer-motion';
 
 const AppInner = () => {

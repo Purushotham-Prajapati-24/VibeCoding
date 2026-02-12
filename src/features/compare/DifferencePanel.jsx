@@ -4,7 +4,7 @@
  */
 import React, { useState, useEffect, useRef } from 'react';
 import { useCompareContext } from './CompareContext';
-import { computeDifferences } from '../analytics/differenceCalculator';
+import { computeDifferences } from '@/features/analytics/differenceCalculator';
 import { ArrowUpRight, ArrowDownRight, Minus, BarChart3 } from 'lucide-react';
 
 const AnimatedValue = ({ value, suffix = '', decimals = 1 }) => {

@@ -4,8 +4,8 @@
  * In compare mode: shows A vs B side-by-side.
  */
 import React, { useState, useEffect, useRef } from 'react';
-import { useCompareContext } from '@/compare/CompareContext';
-import { extractStats } from '@/analytics/differenceCalculator';
+import { useCompareContext } from '@/features/compare/CompareContext';
+import { extractStats } from '@/features/analytics/differenceCalculator';
 import { useScenario } from '@/context/StructuredScenarioContext';
 import {
     Ruler, Mountain, Timer, Zap, Battery, ArrowDown

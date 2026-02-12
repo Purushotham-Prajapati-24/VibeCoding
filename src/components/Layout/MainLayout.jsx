@@ -1,9 +1,9 @@
 import React from 'react';
 import { Atom, GitCompare, Eye, Lightbulb, Crosshair, Maximize2 } from 'lucide-react';
-import JuryMode from '../../jury/JuryMode';
-import { useTutor } from '@/tutor/TutorContext';
+import JuryMode from '../../features/jury/JuryMode';
+import { useTutor } from '@/features/tutor/TutorContext';
 import { BrainCircuit, LineChart, Trophy } from 'lucide-react';
-import Leaderboard from '../../challenges/Leaderboard';
+import Leaderboard from '../../features/challenges/Leaderboard';
 
 const MainLayout = ({ children, ctx, onChallenge, onFullscreen }) => {
     const { setMode, mode } = useTutor();

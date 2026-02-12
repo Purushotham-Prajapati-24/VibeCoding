@@ -1,7 +1,7 @@
 import React from 'react';
 import { Player } from '@remotion/player';
 import { ArrowRight, Lock } from 'lucide-react';
-import HeroTeaserComposition from '../remotion/HeroTeaserComposition';
+import HeroTeaserComposition from '@/features/video/HeroTeaserComposition';
 import MissionSection from '../components/MissionSection';
 import Navbar from '../components/Navbar';
 import { useNavigate } from 'react-router-dom';

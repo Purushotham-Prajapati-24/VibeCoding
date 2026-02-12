@@ -3,7 +3,7 @@ import { Player } from '@remotion/player';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Download, Share2, Clapperboard } from 'lucide-react';
 import { useReelExport } from './useReelExport';
-import SimulationComposition from '../remotion/SimulationComposition';
+import SimulationComposition from '@/features/video/SimulationComposition';
 
 const ReelGenerator = ({ isOpen, onClose, params }) => {
     const [duration, setDuration] = useState(150);

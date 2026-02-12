@@ -1,7 +1,7 @@
 import React, { createContext, useContext } from 'react';
 import { ScenarioProvider, useScenario } from './StructuredScenarioContext';
-import { TutorProvider, useTutor } from '../tutor/TutorContext';
-import { CompareProvider, useCompareContext } from '../compare/CompareContext';
+import { TutorProvider, useTutor } from '@/features/tutor/TutorContext';
+import { CompareProvider, useCompareContext } from '@/features/compare/CompareContext';
 import { SoundProvider, useSound } from '../components/Audio/SoundManager';
 
 /**

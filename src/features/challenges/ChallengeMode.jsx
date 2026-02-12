@@ -1,10 +1,10 @@
-import { getMisconceptionById } from '@/ai/misconceptionEngine';
-import { getExplanation } from '@/ai/adaptiveEngine';
+import { getMisconceptionById } from '@/services/ai/misconceptionEngine';
+import { getExplanation } from '@/services/ai/adaptiveEngine';
 import { motion } from 'framer-motion';
-import { Brain, Loader2,RefreshCw,ArrowRight,Zap,Trophy} from 'lucide-react';
+import { Brain, Loader2, RefreshCw, ArrowRight, Zap, Trophy } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { generateChallenge } from './challengeGenerator';
-import {useSound} from '@/hooks/useSound';
+import { useSound } from '@/hooks/useSound';
 
 
 

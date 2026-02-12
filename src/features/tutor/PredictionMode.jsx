@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useTutor } from './TutorContext';
-import { useCompareContext } from '../compare/CompareContext';
+import { useCompareContext } from '@/features/compare/CompareContext';
 import QuizEngine from './QuizEngine';
 
 const PredictionMode = () => {

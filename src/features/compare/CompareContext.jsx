@@ -3,9 +3,9 @@
  * Wraps both single engine and compare engine, exposes everything via context.
  */
 import React, { createContext, useContext, useState, useCallback, useRef, useEffect } from 'react';
-import usePhysicsSimulation from '../hooks/usePhysicsSimulation';
+import usePhysicsSimulation from '@/hooks/usePhysicsSimulation';
 import useCompareEngine from './useCompareEngine';
-import { useSound } from '../components/Audio/SoundManager';
+import { useSound } from '@/components/Audio/SoundManager';
 
 const CompareCtx = createContext(null);
 

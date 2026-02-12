@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import { useTutor } from '../tutor/TutorContext';
-import { useScenario } from '../context/StructuredScenarioContext';
-import { useCompareContext } from '../compare/CompareContext';
+import { useTutor } from '@/features/tutor/TutorContext';
+import { useScenario } from '@/context/StructuredScenarioContext';
+import { useCompareContext } from '@/features/compare/CompareContext';
 import { useNavigate } from 'react-router-dom';
 
 export const useJuryModeController = (active, onComplete) => {

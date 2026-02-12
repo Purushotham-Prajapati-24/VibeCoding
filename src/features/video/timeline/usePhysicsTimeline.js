@@ -8,7 +8,7 @@ import {
     findApexFrame,
     findLandingFrame,
     estimateFlightTime,
-} from '../../physics/projectileFrameEngine';
+} from '@/services/physics/projectileFrameEngine';
 
 const DEFAULT_FPS = 30;
 const TIME_PADDING = 0.5; // extra seconds after landing

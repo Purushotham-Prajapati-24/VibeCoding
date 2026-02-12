@@ -2,7 +2,7 @@ import React, { useMemo, useEffect, useRef } from 'react';
 import { motion, animate } from 'framer-motion';
 import { useTutor } from './TutorContext';
 import ConceptGraph from './ConceptGraph';
-import { getTopicStats, getMisconceptionFrequency } from '../analytics/learningTracker';
+import { getTopicStats, getMisconceptionFrequency } from '@/features/analytics/learningTracker';
 import {
     Users,
     Target,

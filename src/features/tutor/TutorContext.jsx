@@ -1,9 +1,9 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { parsePhysicsProblem } from '../ai/physicsInterpreter';
-import { analyzeMisconception } from '../ai/misconceptionEngine';
-import { calculateMastery, getExplanation } from '../ai/adaptiveEngine';
-import { useScenario } from '../context/StructuredScenarioContext';
-import { saveSession, loadHistory } from '../analytics/learningTracker'; // Import tracker
+import { parsePhysicsProblem } from '@/services/ai/physicsInterpreter';
+import { analyzeMisconception } from '@/services/ai/misconceptionEngine';
+import { calculateMastery, getExplanation } from '@/services/ai/adaptiveEngine';
+import { useScenario } from '@/context/StructuredScenarioContext';
+import { saveSession, loadHistory } from '@/features/analytics/learningTracker'; // Import tracker
 
 const TutorContext = createContext();
 
