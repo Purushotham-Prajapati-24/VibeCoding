@@ -53,15 +53,9 @@ const NewtonAI = () => {
             <button
                 id="bp-toggle-chat"
                 onClick={toggleChat}
-                className={`fixed bottom-6 right-6 z-9999 flex items-center gap-2 px-5 py-3 bg-linear-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 text-white rounded-full shadow-2xl shadow-blue-900/40 transition-all hover:scale-105 font-bold border border-white/10 group ${!isLoaded ? 'opacity-50 cursor-wait' : ''}`}
+                className={`fixed bottom-6 right-6 z-9999 flex items-center gap-2 px-5 py-3 text-white rounded-full shadow-2xl shadow-blue-900/40 transition-all hover:scale-105 font-bold border border-white/10 group ${!isLoaded ? 'opacity-50 cursor-wait' : ''}`}
             >
-                {isOpen ? <X size={20} /> : <MessageCircle size={20} />}
-                <span>NewtonAI</span>
-
-                {/* Status Indicator */}
-                {!isLoaded && (
-                    <span className="absolute top-0 right-0 -mt-1 -mr-1 w-3 h-3 bg-red-500 rounded-full animate-pulse" />
-                )}
+                
             </button>
         </React.Fragment>
     );
