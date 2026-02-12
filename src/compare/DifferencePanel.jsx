@@ -60,7 +60,7 @@ const DifferencePanel = () => {
     ] : [];
 
     return (
-        <div className="bg-slate-900/60 backdrop-blur-md rounded-2xl border border-white/5 p-4 shadow-2xl ring-1 ring-white/10">
+        <div className="bg-slate-900/60 absolute top-[10vh] backdrop-blur-md rounded-2xl border border-white/5 p-4 shadow-2xl ring-1 ring-white/10">
             <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5 mb-3">
                 <BarChart3 size={14} className="text-cyan-400" />
                 Difference Meter

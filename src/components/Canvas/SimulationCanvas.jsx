@@ -68,7 +68,7 @@ const SimulationCanvas = ({ simulationStateRef, isRunning, params }) => {
         const lerp = (a, b, t) => a + (b - a) * t;
 
         const render = () => {
-            const { x: physX, y: physY, vx: curVx, vy: curVy, history, noDragHistory } = simulationStateRef.current;
+            const { x: physX, y: physY, vx: curVx, vy: curVy, history, noDragHistory, previousHistory } = simulationStateRef.current;
 
             const W = canvas.width;
             const H = canvas.height;
@@ -87,6 +87,7 @@ const SimulationCanvas = ({ simulationStateRef, isRunning, params }) => {
                 let trailMaxY = 10;
                 const allHistories = [history];
                 if (noDragHistory && noDragHistory.length > 0) allHistories.push(noDragHistory);
+                if (previousHistory && previousHistory.length > 0) allHistories.push(previousHistory); // Zoom to include ghost
 
                 for (const h of allHistories) {
                     for (let i = 0; i < h.length; i += 3) {
@@ -206,6 +207,31 @@ const SimulationCanvas = ({ simulationStateRef, isRunning, params }) => {
             ctx.moveTo(0, originY);
             ctx.lineTo(W, originY);
             ctx.stroke();
+
+            // --- Ghost Trajectory (Previous Run) ---
+            if (previousHistory && previousHistory.length > 1) {
+                ctx.setLineDash([2, 6]);
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.moveTo(toCanvasX(previousHistory[0].x), toCanvasY(previousHistory[0].y));
+                for (let i = 1; i < previousHistory.length; i += 2) { // Skip frames for performance/dashed look
+                    ctx.lineTo(toCanvasX(previousHistory[i].x), toCanvasY(previousHistory[i].y));
+                }
+                ctx.stroke();
+                ctx.setLineDash([]);
+
+                // Ghost Landing Marker
+                const lastGhost = previousHistory[previousHistory.length - 1];
+                if (lastGhost.y <= 0.01) {
+                    const gx = toCanvasX(lastGhost.x);
+                    const gy = toCanvasY(0);
+                    ctx.beginPath();
+                    ctx.arc(gx, gy, 3, 0, Math.PI * 2);
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+                    ctx.fill();
+                }
+            }
 
             // --- No-Drag Ghost Trail (dashed, gray/green) ---
             if (hasDrag && noDragHistory && noDragHistory.length > 1) {
@@ -606,40 +632,56 @@ const SimulationCanvas = ({ simulationStateRef, isRunning, params }) => {
                 ctx.restore();
             }
 
-            // --- Legend (when drag is active) ---
-            if (hasDrag && history && history.length > 1) {
-                ctx.save();
-                ctx.globalAlpha = 0.8;
-                const lx = W - 160;
-                const ly = 20;
+            // --- Legend ---
+            ctx.save();
+            ctx.globalAlpha = 0.8;
+            const lx = W - 160;
+            let ly = 20;
 
-                // Solid line = with drag
-                ctx.strokeStyle = '#3b82f6';
-                ctx.lineWidth = 2;
-                ctx.setLineDash([]);
+            // 1. Current Trajectory
+            ctx.strokeStyle = '#3b82f6';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([]);
+            ctx.beginPath();
+            ctx.moveTo(lx, ly);
+            ctx.lineTo(lx + 24, ly);
+            ctx.stroke();
+            ctx.fillStyle = '#94a3b8';
+            ctx.font = '10px sans-serif';
+            ctx.textAlign = 'left';
+            ctx.fillText(hasDrag ? 'Current (Drag)' : 'Current Path', lx + 30, ly + 4);
+            ly += 18;
+
+            // 2. Ghost Trajectory (Previous)
+            if (previousHistory && previousHistory.length > 0) {
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+                ctx.lineWidth = 1.5;
+                ctx.setLineDash([2, 6]);
                 ctx.beginPath();
                 ctx.moveTo(lx, ly);
                 ctx.lineTo(lx + 24, ly);
                 ctx.stroke();
                 ctx.fillStyle = '#94a3b8';
-                ctx.font = '10px sans-serif';
-                ctx.textAlign = 'left';
-                ctx.fillText('With Air Resistance', lx + 30, ly + 4);
+                ctx.fillText('Previous Run', lx + 30, ly + 4);
+                ly += 18;
+            }
 
+            // 3. No Drag (Vacuum)
+            if (hasDrag && history && history.length > 1) {
                 // Dashed line = no drag
                 ctx.strokeStyle = 'rgba(34, 197, 94, 0.6)';
                 ctx.lineWidth = 2;
                 ctx.setLineDash([6, 4]);
                 ctx.beginPath();
-                ctx.moveTo(lx, ly + 18);
-                ctx.lineTo(lx + 24, ly + 18);
+                ctx.moveTo(lx, ly);
+                ctx.lineTo(lx + 24, ly);
                 ctx.stroke();
                 ctx.setLineDash([]);
                 ctx.fillStyle = '#94a3b8';
-                ctx.fillText('Without (Vacuum)', lx + 30, ly + 22);
-
-                ctx.restore();
+                ctx.fillText('Vacuum (Ideal)', lx + 30, ly + 4);
             }
+
+            ctx.restore();
 
             // --- Axis Labels ---
             ctx.fillStyle = '#64748b';

@@ -2,10 +2,13 @@ import React from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { CompareProvider } from '@/compare/CompareContext';
 import { TutorProvider } from '@/tutor/TutorContext';
+import { ScenarioProvider } from '@/context/StructuredScenarioContext';
+import { SoundProvider } from '@/components/Audio/SoundManager.jsx';
 import Home from '@/pages/Home';
 import Explore from '@/pages/Explore';
 import Lab from '@/pages/Lab';
 import ComparePage from '@/pages/ComparePage';
+import ResearchDashboard from '@/research/ResearchDashboard';
 import { AnimatePresence } from 'framer-motion';
 
 const AppInner = () => {
@@ -18,6 +21,7 @@ const AppInner = () => {
         <Route path="/explore" element={<Explore />} />
         <Route path="/lab" element={<Lab />} />
         <Route path="/compare" element={<ComparePage />} />
+        <Route path="/research" element={<ResearchDashboard />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </AnimatePresence>
@@ -26,13 +30,14 @@ const AppInner = () => {
 
 import NewtonAI from '@/components/AI/NewtonAI';
 
+import { LearningEngineProvider } from '@/context/LearningEngineContext';
+
+
 const App = () => (
-  <TutorProvider>
-    <CompareProvider>
-      <NewtonAI />
-      <AppInner />
-    </CompareProvider>
-  </TutorProvider>
+  <LearningEngineProvider>
+    <NewtonAI />
+    <AppInner />
+  </LearningEngineProvider>
 );
 
 export default App;

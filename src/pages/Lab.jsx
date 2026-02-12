@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import MainLayout from '@/components/Layout/MainLayout';
 import SimulationCanvas from '@/components/Canvas/SimulationCanvas';
 import ControlPanel from '@/components/Controls/ControlPanel';
@@ -19,6 +19,7 @@ import { useNavigate } from 'react-router-dom';
 import PredictionMode from '@/tutor/PredictionMode';
 import LearningDashboard from '@/tutor/LearningDashboard';
 import { useTutor } from '@/tutor/TutorContext';
+import { useScenario } from '@/context/StructuredScenarioContext';
 import ReelGenerator from '@/reels/ReelGenerator';
 
 const Lab = () => {
@@ -29,7 +30,7 @@ const Lab = () => {
         isRunning, start, pause, reset,
         single, compare,
     } = ctx;
-    const { mode: tutorMode } = useTutor();
+    const { mode: tutorMode, setMode } = useTutor();
 
     // Remotion modal state
     const [modalOpen, setModalOpen] = useState(false);
@@ -40,11 +41,62 @@ const Lab = () => {
     const [challengeOpen, setChallengeOpen] = useState(false);
     const [reelOpen, setReelOpen] = useState(false);
 
+    const { scenario, updateParameters } = useScenario();
+
     // Active params / state based on mode
-    const isEffectiveCompare = compareMode; // logic simplified as ComparePage is separate route
+    const isEffectiveCompare = compareMode;
     const params = isEffectiveCompare ? compare.paramsA : single.params;
     const setParams = isEffectiveCompare ? compare.setParamsA : single.setParams;
     const simulationStateRef = isEffectiveCompare ? compare.stateA : single.simulationStateRef;
+
+    // ⚡ SYNC: Incoming AI Scenario -> Lab Params
+    // ⚡ SYNC: Incoming AI Scenario -> Lab Params
+    useEffect(() => {
+        if (!scenario) return;
+
+        // BLAST SHIELD: If the update came from the Lab itself, IGNORE IT.
+        // This stops the infinite feedback loop (Slider -> Context -> Slider -> ...)
+        if (scenario.lastUpdatedBy === 'lab') return;
+
+        // Check if values allow us to skip update (prevent fighting with slider)
+        const v0Diff = Math.abs(params.v0 - scenario.parameters.initialVelocity);
+        const angleDiff = Math.abs(params.angle - scenario.parameters.angle);
+        const gravDiff = Math.abs(params.gravity - scenario.parameters.gravity);
+        const labelDiff = params.label !== scenario.environment;
+
+        if (v0Diff > 0.05 || angleDiff > 0.05 || gravDiff > 0.05 || labelDiff) {
+            setParams(prev => ({
+                ...prev,
+                v0: scenario.parameters.initialVelocity,
+                angle: scenario.parameters.angle,
+                gravity: scenario.parameters.gravity,
+                label: scenario.environment
+            }));
+        }
+    }, [
+        scenario.parameters.initialVelocity,
+        scenario.parameters.angle,
+        scenario.parameters.gravity,
+        scenario.environment,
+        scenario.lastUpdatedBy // Critical dependency
+    ]);
+
+    // ⚡ SYNC: Lab Params -> Central Store (Real-time Feedback)
+    useEffect(() => {
+        // Debounce or direct update? Direct for now for "Real-time" feel
+        // We only update if it differs from scenario to avoid loops
+        if (
+            Math.abs(params.v0 - scenario.parameters.initialVelocity) > 0.1 ||
+            Math.abs(params.angle - scenario.parameters.angle) > 0.1 ||
+            Math.abs(params.gravity - scenario.parameters.gravity) > 0.1
+        ) {
+            updateParameters({
+                initialVelocity: params.v0,
+                angle: params.angle,
+                gravity: params.gravity
+            }, 'lab'); // 🏷️ Tag this update as coming from 'lab'
+        }
+    }, [params.v0, params.angle, params.gravity]);
 
     // Determine if simulation has landed
     const hasLanded = !isRunning &&
@@ -183,7 +235,7 @@ const Lab = () => {
             />
             <PredictionMode />
             <ReelGenerator isOpen={reelOpen} onClose={() => setReelOpen(false)} params={params} />
-            {tutorMode === 'dashboard' && <LearningDashboard />}
+            {tutorMode === 'dashboard' && <LearningDashboard onClose={() => setMode('simulation')} />}
         </>
     );
 };

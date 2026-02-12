@@ -1,100 +1,127 @@
-import React, { useRef, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState, useEffect } from 'react';
 import { Player } from '@remotion/player';
-import ConceptExplainerComposition from '@/remotion/ConceptExplainerComposition';
+import { motion, AnimatePresence } from 'framer-motion';
+import { X, Download, Share2, Clapperboard } from 'lucide-react';
 import { useReelExport } from './useReelExport';
-import { Share2, Download, X, Film, Loader2 } from 'lucide-react';
+import SimulationComposition from '../remotion/SimulationComposition';
 
 const ReelGenerator = ({ isOpen, onClose, params }) => {
-    const playerRef = useRef(null);
-    // We need a ref to the actual canvas element inside the player. 
-    // Remotion Player doesn't expose the canvas directly via ref easily, 
-    // but we can try to find it or query it. 
-    // For this prototype, we'll assume we can pass a ref down or find the canvas.
-    // *Hack for Hackathon*: Query selector targeting the player ID 
+    const [duration, setDuration] = useState(150);
+    const { isExporting, progress, exportReel } = useReelExport();
 
-    const [canvasRef, setCanvasRef] = useState({ current: null });
-    const { exportReel, isExporting, progress } = useReelExport(canvasRef);
-
-    // Effect to find canvas after mount
-    React.useEffect(() => {
-        if (isOpen) {
-            const timer = setTimeout(() => {
-                const canvas = document.querySelector('#reel-player canvas');
-                if (canvas) setCanvasRef({ current: canvas });
-            }, 1000);
-            return () => clearTimeout(timer);
-        }
-    }, [isOpen]);
+    if (!isOpen) return null;
 
     return (
         <AnimatePresence>
-            {isOpen && (
-                <div className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-md flex items-center justify-center p-4">
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.9 }}
-                        className="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden max-w-lg w-full shadow-2xl flex flex-col max-h-[90vh]"
-                    >
-                        {/* Header */}
-                        <div className="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-900/50">
-                            <h2 className="text-xl font-bold bg-gradient-to-r from-pink-500 to-purple-500 bg-clip-text text-transparent flex items-center gap-2">
-                                <Film size={20} className="text-pink-500" />
-                                Physics Reel Studio
-                            </h2>
-                            <button onClick={onClose} className="p-2 hover:bg-slate-800 rounded-full text-slate-400 transition-colors">
-                                <X size={20} />
+            <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 z-100 bg-black/90 backdrop-blur-xl flex items-center justify-center p-4"
+            >
+                <div className="w-full max-w-6xl h-[90vh] grid grid-cols-1 lg:grid-cols-12 gap-8">
+
+                    {/* Left: Preview */}
+                    <div className="lg:col-span-8 bg-slate-900 rounded-3xl overflow-hidden border border-slate-800 shadow-2xl flex items-center justify-center relative">
+                        <div className="aspect-9/16 h-[90%] bg-black rounded-lg overflow-hidden relative shadow-lg border border-slate-700/50">
+                            <Player
+                                component={SimulationComposition}
+                                durationInFrames={duration}
+                                compositionWidth={1080}
+                                compositionHeight={1920}
+                                fps={30}
+                                inputProps={{
+                                    params: params,
+                                    isReel: true // Flag to tell composition to use vertical layout
+                                }}
+                                style={{ width: '100%', height: '100%' }}
+                                controls
+                            />
+
+                            {/* Overlay Guidelines (TikTok/Reels Safe Zones) */}
+                            <div className="absolute inset-x-0 top-0 h-20 bg-linear-to-b from-black/50 to-transparent pointer-events-none" />
+                            <div className="absolute inset-x-0 bottom-0 h-32 bg-linear-to-t from-black/50 to-transparent pointer-events-none" />
+                            <div className="absolute right-2 top-1/2 -translate-y-1/2 flex flex-col gap-4 pointer-events-none opacity-50">
+                                {[1, 2, 3, 4].map(i => <div key={i} className="w-8 h-8 rounded-full bg-slate-800" />)}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Right: Controls */}
+                    <div className="lg:col-span-4 flex flex-col justify-between py-4">
+                        <div>
+                            <div className="flex justify-between items-start mb-8">
+                                <div>
+                                    <h2 className="text-3xl font-bold text-white font-display">Physics Reel</h2>
+                                    <p className="text-slate-400">Create viral-ready clips</p>
+                                </div>
+                                <button onClick={onClose} className="p-2 hover:bg-slate-800 rounded-full text-slate-400 hover:text-white transition-colors">
+                                    <X size={24} />
+                                </button>
+                            </div>
+
+                            <div className="space-y-6">
+                                <div className="bg-slate-800/50 p-6 rounded-2xl border border-slate-700">
+                                    <h3 className="text-sm font-bold text-slate-300 uppercase tracking-wider mb-4">Clip Settings</h3>
+
+                                    <div className="space-y-4">
+                                        <div>
+                                            <label className="text-xs text-slate-500 mb-1 block">Duration</label>
+                                            <input
+                                                type="range"
+                                                min="60"
+                                                max="300"
+                                                value={duration}
+                                                onChange={(e) => setDuration(parseInt(e.target.value))}
+                                                className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-blue-500"
+                                            />
+                                            <div className="flex justify-between mt-1">
+                                                <span className="text-xs text-slate-500">2s</span>
+                                                <span className="text-xs text-blue-400 font-bold">{(duration / 30).toFixed(1)}s</span>
+                                                <span className="text-xs text-slate-500">10s</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="bg-slate-800/50 p-6 rounded-2xl border border-slate-700">
+                                    <h3 className="text-sm font-bold text-slate-300 uppercase tracking-wider mb-4">Style</h3>
+                                    <div className="flex gap-2">
+                                        {['Neon', 'Minimal', 'Scientific'].map(style => (
+                                            <button key={style} className="px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-sm font-medium transition-colors">
+                                                {style}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="space-y-3">
+                            <button
+                                onClick={() => exportReel({ duration, params })}
+                                disabled={isExporting}
+                                className="w-full py-4 bg-linear-to-r from-blue-600 to-indigo-600 rounded-xl font-bold text-white shadow-lg shadow-blue-900/40 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {isExporting ? (
+                                    <>
+                                        <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                        Rendering... {Math.round(progress * 100)}%
+                                    </>
+                                ) : (
+                                    <>
+                                        <Download size={20} />
+                                        Export MP4
+                                    </>
+                                )}
                             </button>
+                            <p className="text-center text-xs text-slate-500">
+                                Ready for TikTok, Instagram Reels, and YouTube Shorts (9:16)
+                            </p>
                         </div>
-
-                        {/* Player Preview */}
-                        <div className="flex-1 bg-black relative flex items-center justify-center p-4" id="reel-player-container">
-                            {/* 9:16 Aspect Ratio Container for Reel */}
-                            <div className="relative aspect-[9/16] h-[60vh] rounded-xl overflow-hidden shadow-2xl border border-slate-700">
-                                <Player
-                                    id="reel-player"
-                                    component={ConceptExplainerComposition}
-                                    durationInFrames={300}
-                                    fps={30}
-                                    compositionWidth={720}  // 9:16ish vertical
-                                    compositionHeight={1280}
-                                    style={{ width: '100%', height: '100%' }}
-                                    controls={true}
-                                    inputProps={{
-                                        params,
-                                        variable: 'Range' // or dynamic
-                                    }}
-                                />
-                            </div>
-                        </div>
-
-                        {/* Controls */}
-                        <div className="p-6 bg-slate-900/80 border-t border-slate-800 space-y-4">
-                            <div className="flex justify-between items-center">
-                                <div className="text-sm text-slate-400">
-                                    <span className="text-white font-bold block mb-1">Viral Ready</span>
-                                    9:16 Vertical Format • 60 FPS
-                                </div>
-                                <div className="flex gap-2">
-                                    <button
-                                        onClick={() => exportReel(`physics_reel_${Date.now()}.webm`)}
-                                        disabled={isExporting}
-                                        className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl font-bold transition-all disabled:opacity-50 border border-slate-700"
-                                    >
-                                        {isExporting ? <Loader2 className="animate-spin" size={18} /> : <Download size={18} />}
-                                        {isExporting ? `${progress}%` : 'Save'}
-                                    </button>
-                                    <button className="flex items-center gap-2 px-6 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold shadow-lg shadow-blue-500/20 transition-all">
-                                        <Share2 size={18} />
-                                        Share
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </motion.div>
+                    </div>
                 </div>
-            )}
+            </motion.div>
         </AnimatePresence>
     );
 };

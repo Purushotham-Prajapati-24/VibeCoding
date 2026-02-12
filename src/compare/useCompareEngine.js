@@ -9,7 +9,9 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { ProjectileEngine } from '../physics/projectileRealtimeEngine';
 
-const useCompareEngine = () => {
+
+
+const useCompareEngine = (onEvent) => {
     const [paramsA, setParamsA] = useState({
         v0: 50, angle: 45, gravity: 9.81, drag: 0,
         label: '🌍 Earth',
@@ -38,11 +40,25 @@ const useCompareEngine = () => {
     const stateA = useRef({ x: 0, y: 0, t: 0, history: [], noDragHistory: [] });
     const stateB = useRef({ x: 0, y: 0, t: 0, history: [], noDragHistory: [] });
 
+    // Event tracking vars
+    const prevA = useRef({ vy: 0, isLanded: false });
+    const prevB = useRef({ vy: 0, isLanded: false });
+
     const update = useCallback(() => {
         const dt = 1 / 60;
 
         const rA = engineA.current.step(dt);
         const rB = engineB.current.step(dt);
+
+        // --- Event Detection (World A) ---
+        if (prevA.current.vy > 0 && rA.vy <= 0) onEvent && onEvent('APEX_REACHED', { source: 'A', ...rA });
+        if (rA.isLanded && !prevA.current.isLanded) onEvent && onEvent('IMPACT', { source: 'A', ...rA });
+        prevA.current = { vy: rA.vy, isLanded: rA.isLanded };
+
+        // --- Event Detection (World B) ---
+        if (prevB.current.vy > 0 && rB.vy <= 0) onEvent && onEvent('APEX_REACHED', { source: 'B', ...rB });
+        if (rB.isLanded && !prevB.current.isLanded) onEvent && onEvent('IMPACT', { source: 'B', ...rB });
+        prevB.current = { vy: rB.vy, isLanded: rB.isLanded };
 
         stateA.current = {
             x: rA.x, y: rA.y, vx: rA.vx, vy: rA.vy, t: rA.t,
@@ -60,7 +76,7 @@ const useCompareEngine = () => {
             return;
         }
         requestRef.current = requestAnimationFrame(update);
-    }, []);
+    }, [onEvent]);
 
     const start = useCallback(() => {
         // Always read from refs — never from stale closure state
@@ -71,8 +87,14 @@ const useCompareEngine = () => {
         const pB = paramsBRef.current;
         engineA.current.initialize(pA.v0, pA.angle, pA.gravity, pA.drag);
         engineB.current.initialize(pB.v0, pB.angle, pB.gravity, pB.drag);
+
         stateA.current = { x: 0, y: 0, vx: 0, vy: 0, t: 0, history: [], noDragHistory: [] };
         stateB.current = { x: 0, y: 0, vx: 0, vy: 0, t: 0, history: [], noDragHistory: [] };
+
+        // Reset event trackers
+        prevA.current = { vy: pA.v0 * Math.sin(pA.angle * Math.PI / 180), isLanded: false };
+        prevB.current = { vy: pB.v0 * Math.sin(pB.angle * Math.PI / 180), isLanded: false };
+
         setIsRunning(true);
     }, []);
 
@@ -84,11 +106,14 @@ const useCompareEngine = () => {
         engineB.current.reset();
         stateA.current = { x: 0, y: 0, vx: 0, vy: 0, t: 0, history: [], noDragHistory: [] };
         stateB.current = { x: 0, y: 0, vx: 0, vy: 0, t: 0, history: [], noDragHistory: [] };
+        prevA.current = { vy: 0, isLanded: false };
+        prevB.current = { vy: 0, isLanded: false };
         if (requestRef.current) cancelAnimationFrame(requestRef.current);
     }, []);
 
     // Sync shared params (v0, angle) from A to B
     const setSharedParams = useCallback((key, value) => {
+        // ... (existing logic) ...
         if (key === 'v0' || key === 'angle') {
             setParamsA(p => ({ ...p, [key]: value }));
             setParamsB(p => ({ ...p, [key]: value }));

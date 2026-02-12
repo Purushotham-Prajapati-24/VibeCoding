@@ -1,8 +1,7 @@
-import React, { useMemo, useEffect, useRef } from 'react';
-import { motion, animate } from 'framer-motion';
-import { useTutor } from './TutorContext';
-import ConceptGraph from './ConceptGraph';
-import { getTopicStats, getMisconceptionFrequency } from '../analytics/learningTracker';
+import React, { useMemo } from 'react';
+import { motion } from 'framer-motion';
+import { useTutor } from '../../tutor/TutorContext';
+import { getTopicStats, getMisconceptionFrequency } from '../../analytics/learningTracker';
 import {
     Users,
     Target,
@@ -13,50 +12,20 @@ import {
     Award
 } from 'lucide-react';
 
-const CountUp = ({ to, suffix = '' }) => {
-    const nodeRef = useRef();
-
-    useEffect(() => {
-        const node = nodeRef.current;
-        const controls = animate(0, to, {
-            duration: 1.5,
-            ease: "easeOut",
-            onUpdate: (value) => {
-                if (node) node.textContent = Math.round(value) + suffix;
-            }
-        });
-        return () => controls.stop();
-    }, [to, suffix]);
-
-    return <span ref={nodeRef} />;
-};
-
-const StatCard = ({ icon: Icon, label, value, subtext, color = "blue" }) => {
-    const isNumeric = typeof value === 'number';
-    const isPercentage = typeof value === 'string' && value.includes('%');
-    const numericValue = isNumeric ? value : (isPercentage ? parseInt(value) : null);
-
-    return (
-        <div className={`bg-slate-800/50 backdrop-blur-sm border border-slate-700 p-4 rounded-xl flex items-start gap-4 hover:border-${color}-500/50 transition-colors group`}>
-            <div className={`p-3 rounded-lg bg-${color}-500/10 text-${color}-400 group-hover:bg-${color}-500/20 transition-colors`}>
-                <Icon size={24} />
-            </div>
-            <div>
-                <h4 className="text-slate-400 text-sm font-medium">{label}</h4>
-                <div className="text-2xl font-bold text-white mt-1">
-                    {numericValue !== null ? (
-                        <CountUp to={numericValue} suffix={isPercentage ? '%' : ''} />
-                    ) : (
-                        value
-                    )}
-                </div>
-                {subtext && <div className="text-xs text-slate-500 mt-1">{subtext}</div>}
-            </div>
+const StatCard = ({ icon: Icon, label, value, subtext, color = "blue" }) => (
+    <div className={`bg-slate-800/50 backdrop-blur-sm border border-slate-700 p-4 rounded-xl flex items-start gap-4 hover:border-${color}-500/50 transition-colors`}>
+        <div className={`p-3 rounded-lg bg-${color}-500/10 text-${color}-400`}>
+            <Icon size={24} />
         </div>
-    );
-};
+        <div>
+            <h4 className="text-slate-400 text-sm font-medium">{label}</h4>
+            <div className="text-2xl font-bold text-white mt-1">{value}</div>
+            {subtext && <div className="text-xs text-slate-500 mt-1">{subtext}</div>}
+        </div>
+    </div>
+);
 
-const LearningDashboard = ({ onClose }) => {
+const Dashboard = ({ onClose }) => {
     const { history, mastery } = useTutor();
 
     const stats = useMemo(() => getTopicStats(history), [history]);
@@ -72,9 +41,9 @@ const LearningDashboard = ({ onClose }) => {
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
-            className="fixed inset-0 z-200 flex items-center justify-center bg-black/80 backdrop-blur-md p-4"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4"
         >
-            <div className="bg-slate-900 border border-slate-700 w-full max-w-4xl h-[85vh] rounded-3xl overflow-hidden flex flex-col shadow-2xl relative">
+            <div className="bg-slate-900 border border-slate-700 w-full max-w-4xl h-[85vh] rounded-3xl overflow-hidden flex flex-col shadow-2xl">
                 {/* Header */}
                 <div className="p-6 border-b border-slate-800 flex justify-between items-center bg-slate-900/50">
                     <div>
@@ -86,7 +55,7 @@ const LearningDashboard = ({ onClose }) => {
                     </div>
                     <button
                         onClick={onClose}
-                        className="p-2 hover:bg-slate-800 rounded-full text-slate-400 hover:text-white transition-colors absolute top-6 right-6"
+                        className="p-2 hover:bg-slate-800 rounded-full text-slate-400 hover:text-white transition-colors"
                     >
                         ✕
                     </button>
@@ -113,7 +82,7 @@ const LearningDashboard = ({ onClose }) => {
                             icon={Zap}
                             label="Accuracy Rate"
                             value={`${mastery.score}%`}
-                            subtext="Last 5 weighted"
+                            subtext="Last 5 attempts weighted"
                             color="emerald"
                         />
                         <StatCard
@@ -150,7 +119,7 @@ const LearningDashboard = ({ onClose }) => {
                                                     initial={{ width: 0 }}
                                                     animate={{ width: `${data.accuracy}%` }}
                                                     className={`h-full rounded-full ${data.accuracy >= 80 ? 'bg-green-500' :
-                                                        data.accuracy >= 50 ? 'bg-amber-500' : 'bg-red-500'
+                                                            data.accuracy >= 50 ? 'bg-amber-500' : 'bg-red-500'
                                                         }`}
                                                 />
                                             </div>
@@ -188,14 +157,6 @@ const LearningDashboard = ({ onClose }) => {
                                 )}
                             </div>
                         </div>
-                    </div>
-
-                    {/* Concept Graph */}
-                    <div className="bg-slate-800/30 rounded-2xl p-6 border border-slate-700/50">
-                        <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                            <BookOpen size={18} className="text-violet-400" /> Knowledge Graph
-                        </h3>
-                        <ConceptGraph />
                     </div>
 
                     {/* Recent History Log */}
@@ -243,4 +204,4 @@ const LearningDashboard = ({ onClose }) => {
     );
 };
 
-export default LearningDashboard;
+export default Dashboard;

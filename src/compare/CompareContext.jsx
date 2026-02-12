@@ -5,6 +5,7 @@
 import React, { createContext, useContext, useState, useCallback, useRef, useEffect } from 'react';
 import usePhysicsSimulation from '../hooks/usePhysicsSimulation';
 import useCompareEngine from './useCompareEngine';
+import { useSound } from '../components/Audio/SoundManager';
 
 const CompareCtx = createContext(null);
 
@@ -21,14 +22,28 @@ export const CompareProvider = ({ children }) => {
     const [spotlightEnabled, setSpotlightEnabled] = useState(true);
     const [juryMode, setJuryMode] = useState(false);
 
+    // Sound & Event Handling
+    const { play } = useSound();
+
+    // Unified Event Handler
+    const handleSimulationEvent = useCallback((event, payload) => {
+        // console.log(`Physics Event: ${event}`, payload);
+
+        if (event === 'APEX_REACHED') {
+            play('success'); // Using success sound for Apex for now
+        } else if (event === 'IMPACT') {
+            play('impact');
+        }
+    }, [play]);
+
     // Keep a ref to compareMode so functions (start/reset) don't need it as a dependency
     // This solves the stale closure issue in JuryMode's setTimeout chain.
     const compareModeRef = useRef(compareMode);
     useEffect(() => { compareModeRef.current = compareMode; }, [compareMode]);
 
     // Engines
-    const single = usePhysicsSimulation();
-    const compare = useCompareEngine();
+    const single = usePhysicsSimulation(handleSimulationEvent);
+    const compare = useCompareEngine(handleSimulationEvent);
 
     // Use refs to hold latest engine instances so start/stop/reset are stable
     const singleRef = useRef(single);

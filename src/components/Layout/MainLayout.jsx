@@ -1,17 +1,19 @@
 import React from 'react';
 import { Atom, GitCompare, Eye, Lightbulb, Crosshair, Maximize2 } from 'lucide-react';
-import JuryMode from '@/modes/JuryMode';
+import JuryMode from '../../jury/JuryMode';
 import { useTutor } from '@/tutor/TutorContext';
-import { BrainCircuit, LineChart } from 'lucide-react';
+import { BrainCircuit, LineChart, Trophy } from 'lucide-react';
+import Leaderboard from '../../challenges/Leaderboard';
 
 const MainLayout = ({ children, ctx, onChallenge, onFullscreen }) => {
     const { setMode, mode } = useTutor();
+    const [leaderboardOpen, setLeaderboardOpen] = React.useState(false);
     return (
         <div className="min-h-screen bg-[#0f172a] text-slate-200 p-4 font-sans overflow-hidden flex flex-col">
             <header className="mb-3 px-2 flex items-center justify-between">
                 <h1 className="text-2xl font-bold flex items-center gap-2">
                     <Atom size={24} className="text-blue-400" />
-                    <span className="bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">NewTonX AI</span>
+                    <span className="bg-linear-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">NewTonX AI</span>
                     <span className="text-xs text-slate-600 font-normal ml-2">Comparative Physics Lab</span>
                 </h1>
 
@@ -99,8 +101,17 @@ const MainLayout = ({ children, ctx, onChallenge, onFullscreen }) => {
                             Analytics
                         </button>
 
+                        <button
+                            onClick={() => setLeaderboardOpen(true)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 border border-amber-500/30 transition-all"
+                        >
+                            <Trophy size={12} />
+                            Rankings
+                        </button>
+
                         {/* Jury Demo */}
                         <JuryMode />
+                        <Leaderboard isOpen={leaderboardOpen} onClose={() => setLeaderboardOpen(false)} />
 
                         {/* Compare Mode World B Selector */}
                         {ctx.compareMode && (

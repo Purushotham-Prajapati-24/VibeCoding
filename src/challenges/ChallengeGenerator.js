@@ -33,36 +33,71 @@ Schema:
 }
 `;
 
-const mockChallenge = () => ({
-    title: "Martian Canyon Jump",
-    scenario: "You need to clear a canyon on Mars. Gravity is 3.72 m/s². The canyon is 75m wide.",
-    planet: "Mars",
-    gravity: 3.72,
-    targetDistance: 75,
-    constraints: { v0_min: 10, v0_max: 30, angle_min: 0, angle_max: 90 },
-    question: "To clear 75m with minimal speed, what angle is best?",
+const PLANETS = [
+  { name: "Earth", g: 9.81, context: "a standard field" },
+  { name: "Mars", g: 3.71, context: "a dusty red canyon" },
+  { name: "Moon", g: 1.62, context: "a lunar crater" },
+  { name: "Jupiter", g: 24.79, context: "a high-gravity training chamber" },
+  { name: "Triton", g: 0.78, context: "an ice cryovolcano" }
+];
+
+const SCENARIOS = [
+  "clear a gap of",
+  "hit a target at",
+  "deliver a package to a base at",
+  "launch a probe to a sensor at"
+];
+
+const generateMockChallenge = () => {
+  // 1. Randomize Environment
+  const planet = PLANETS[Math.floor(Math.random() * PLANETS.length)];
+  const distance = 50 + Math.floor(Math.random() * 200); // 50m to 250m
+  const scenarioAction = SCENARIOS[Math.floor(Math.random() * SCENARIOS.length)];
+
+  // 2. Physics Calculation (Reverse Engineering)
+  // We want a solvable problem. Let's pick a logical 45 degree shot for max range logic
+  // Range = (v^2 * sin(2theta)) / g
+  // Let's fix 45 degrees as the 'optimal' answer for distance optimization questions
+  // So required v0 = sqrt(distance * g)
+
+  const requiredV0 = Math.sqrt(distance * planet.g);
+  const v0Display = Math.round(requiredV0);
+
+  // 3. Construct the "AI" Response
+  return {
+    title: `${planet.name} ${scenarioAction.split(' ')[0]} Mission`,
+    scenario: `You are on ${planet.name} (${planet.g} m/s²). You need to ${scenarioAction} ${distance}m away. precise calculation is required.`,
+    planet: planet.name,
+    gravity: planet.g,
+    targetDistance: distance,
+    constraints: { v0_min: 10, v0_max: 100, angle_min: 0, angle_max: 90 },
+    question: `To hit exactly ${distance}m with a launch speed of ${v0Display} m/s, what implies the optimal launch angle for maximum efficiency?`,
     options: [
-        { id: "A", text: "30 degrees", correct: false },
-        { id: "B", text: "45 degrees", correct: true },
-        { id: "C", text: "60 degrees", correct: false }
+      { id: "A", text: "30 degrees", correct: false },
+      { id: "B", text: "45 degrees", correct: true }, // Simplified logic for mock
+      { id: "C", text: "60 degrees", correct: false }
     ],
-    hint: "45 degrees provides the maximum range for a given speed in a vacuum."
-});
+    hint: `Remember that 45° yields the maximum range in a vacuum interaction.`
+  };
+};
 
 export const generateChallenge = async (difficulty = 'intermediate') => {
-    if (MOCK_MODE) {
-        console.log("Generating Mock Challenge...");
-        return new Promise(resolve => setTimeout(() => resolve(mockChallenge()), 1000));
-    }
+  if (MOCK_MODE) {
+    console.log("Generating Dynamic Mock Challenge...");
+    return new Promise(resolve => setTimeout(() => resolve(generateMockChallenge()), 800));
+  }
 
-    try {
-        const prompt = `Generate a ${difficulty} level projectile physics challenge.`;
-        const result = await model.generateContent([SYSTEM_PROMPT, prompt]);
-        const response = await result.response;
-        const text = response.text().replace(/```json|```/g, '').trim();
-        return JSON.parse(text);
-    } catch (e) {
-        console.error("Gemini Generation Failed:", e);
-        return mockChallenge(); // Fallback
-    }
+  try {
+    // Add timestamp to force unique generation
+    const seed = Date.now();
+    const prompt = `Generate a unique ${difficulty} level projectile physics challenge. Random Seed: ${seed}. Vary the planet and constraints.`;
+
+    const result = await model.generateContent([SYSTEM_PROMPT, prompt]);
+    const response = await result.response;
+    const text = response.text().replace(/```json|```/g, '').trim();
+    return JSON.parse(text);
+  } catch (e) {
+    console.error("Gemini Generation Failed (Falling back to dynamic mock):", e);
+    return generateMockChallenge();
+  }
 };

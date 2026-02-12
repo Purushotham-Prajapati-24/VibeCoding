@@ -1,0 +1,117 @@
+import React, { createContext, useContext, useState, useEffect } from 'react';
+
+// 1. Initial State Template
+const INITIAL_STATE = {
+    scenarioType: 'projectile_motion',
+    object: 'ball',
+    parameters: {
+        initialVelocity: 20, // m/s
+        angle: 45, // degrees
+        gravity: 9.81, // m/s^2
+    },
+    environment: 'Earth',
+    derivedValues: {
+        timeOfFlight: 0,
+        maxHeight: 0,
+        range: 0,
+        vx: 0,
+        vy: 0
+    },
+    userIntent: [], // 'visualize', etc.
+    tutorMetadata: {
+        assumptions: [],
+        confidenceScore: 1.0
+    },
+    lastUpdatedBy: 'system' // 'system' | 'user' | 'ai'
+};
+
+const ScenarioContext = createContext();
+
+export const useScenario = () => useContext(ScenarioContext);
+
+export const ScenarioProvider = ({ children }) => {
+    const [scenario, setScenario] = useState(INITIAL_STATE);
+
+    /**
+     * DERIVED VALUES ENGINE
+     * Automatically re-computes physics metrics when parameters change.
+     */
+    useEffect(() => {
+        const { initialVelocity, angle, gravity } = scenario.parameters;
+        // Basic Validation
+        const v0 = Math.max(0, parseFloat(initialVelocity) || 0);
+        const ang = parseFloat(angle) || 0;
+        const g = Math.max(0.1, parseFloat(gravity) || 9.81); // Prevent division by zero
+
+        const rad = (ang * Math.PI) / 180;
+
+        const vx = v0 * Math.cos(rad);
+        const vy = v0 * Math.sin(rad);
+
+        // Projectile Motion Equations
+        const timeToApex = vy / g;
+        const totalTime = 2 * timeToApex;
+        const maxHeight = (vy * vy) / (2 * g);
+        const range = vx * totalTime;
+
+        setScenario(prev => ({
+            ...prev,
+            derivedValues: {
+                timeOfFlight: parseFloat(totalTime.toFixed(2)),
+                maxHeight: parseFloat(maxHeight.toFixed(2)),
+                range: parseFloat(range.toFixed(2)),
+                vx: parseFloat(vx.toFixed(2)),
+                vy: parseFloat(vy.toFixed(2))
+            }
+        }));
+
+    }, [
+        scenario.parameters.initialVelocity,
+        scenario.parameters.angle,
+        scenario.parameters.gravity
+    ]);
+
+    /**
+     * UPDATE ACTIONS
+     */
+    const updateParameters = (newParams, source = 'user') => {
+        setScenario(prev => ({
+            ...prev,
+            lastUpdatedBy: source,
+            parameters: { ...prev.parameters, ...newParams }
+        }));
+    };
+
+    const loadScenario = (aiParsedScenario) => {
+        // Sanitize and Validate AI Output before injecting into state
+        const safeParams = {
+            initialVelocity: aiParsedScenario.parameters?.initialVelocity || 20,
+            angle: aiParsedScenario.parameters?.angle || 45,
+            gravity: aiParsedScenario.parameters?.gravity || 9.81
+        };
+
+        setScenario(prev => ({
+            ...prev,
+            scenarioType: aiParsedScenario.scenarioType || 'projectile_motion',
+            object: aiParsedScenario.object || 'ball',
+            environment: aiParsedScenario.environment || 'Earth',
+            parameters: safeParams,
+            userIntent: aiParsedScenario.requestedOutputs || [],
+            tutorMetadata: {
+                assumptions: aiParsedScenario.assumptions || [],
+                confidenceScore: aiParsedScenario.confidenceScore || 0.8
+            },
+            lastUpdatedBy: 'ai'
+        }));
+    };
+
+    return (
+        <ScenarioContext.Provider value={{
+            scenario,
+            updateParameters,
+            loadScenario
+        }}>
+            {children}
+        </ScenarioContext.Provider>
+    );
+};

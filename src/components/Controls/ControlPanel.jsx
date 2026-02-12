@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import ReplayButton from '../Remotion/ReplayButton';
 import ExplanationVideoButton from '../Remotion/ExplanationVideoButton';
+import { useSound } from '../Audio/SoundManager.jsx';
 
 const PLANETS = [
     { name: 'Mercury', gravity: 3.7, drag: 0, icon: CircleDot, color: 'text-gray-400' },
@@ -140,6 +141,20 @@ const ControlPanel = ({
             </div>
         </div>
     );
+
+    // Sound Integration
+    const { play } = useSound();
+
+    const handleStart = () => {
+        play('click');
+        play('launch'); // Swoosh sound
+        onStart();
+    };
+
+    const handleButton = (action) => {
+        play('click');
+        action();
+    };
 
     return (
         <div className="bg-slate-800/50 backdrop-blur-sm rounded-2xl border border-slate-700 p-6 flex flex-col gap-4 h-full shadow-xl overflow-y-auto">
@@ -277,29 +292,29 @@ const ControlPanel = ({
             {/* Buttons */}
             <div className="grid grid-cols-2 gap-3 pt-2">
                 {!isRunning ? (
-                    <button className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white py-2.5 px-4 rounded-xl transition-all font-medium shadow-lg shadow-blue-500/20" onClick={onStart}>
+                    <button className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white py-2.5 px-4 rounded-xl transition-all font-medium shadow-lg shadow-blue-500/20" onClick={handleStart}>
                         <Play size={18} fill="currentColor" /> Start
                     </button>
                 ) : (
-                    <button className="flex items-center justify-center gap-2 bg-amber-600 hover:bg-amber-500 text-white py-2.5 px-4 rounded-xl transition-all font-medium shadow-lg shadow-amber-500/20" onClick={onPause}>
+                    <button className="flex items-center justify-center gap-2 bg-amber-600 hover:bg-amber-500 text-white py-2.5 px-4 rounded-xl transition-all font-medium shadow-lg shadow-amber-500/20" onClick={() => handleButton(onPause)}>
                         <Pause size={18} fill="currentColor" /> Pause
                     </button>
                 )}
 
-                <button className="flex items-center justify-center gap-2 bg-slate-700 hover:bg-slate-600 text-white py-2.5 px-4 rounded-xl transition-all font-medium border border-slate-600" onClick={onReset}>
+                <button className="flex items-center justify-center gap-2 bg-slate-700 hover:bg-slate-600 text-white py-2.5 px-4 rounded-xl transition-all font-medium border border-slate-600" onClick={() => handleButton(onReset)}>
                     <RotateCcw size={18} /> Reset
                 </button>
             </div>
 
             {/* Remotion Video Buttons */}
             <div className="flex flex-col gap-2 pt-2 border-t border-slate-700/50">
-                <ReplayButton onClick={onReplay} disabled={!hasLanded} />
-                <ExplanationVideoButton onClick={onExplain} />
+                <ReplayButton onClick={() => handleButton(onReplay)} disabled={!hasLanded} />
+                <ExplanationVideoButton onClick={() => handleButton(onExplain)} />
 
                 <button
-                    onClick={onReel}
+                    onClick={() => handleButton(onReel)}
                     disabled={!hasLanded}
-                    className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl font-medium transition-all bg-gradient-to-r from-pink-900/50 to-purple-900/50 hover:from-pink-900/70 hover:to-purple-900/70 text-pink-200 border border-pink-500/30 disabled:opacity-50 disabled:cursor-not-allowed group"
+                    className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl font-medium transition-all bg-linear-to-r from-pink-900/50 to-purple-900/50 hover:from-pink-900/70 hover:to-purple-900/70 text-pink-200 border border-pink-500/30 disabled:opacity-50 disabled:cursor-not-allowed group"
                 >
                     <Film size={16} className="group-hover:scale-110 transition-transform" />
                     <span>Create Viral Reel</span>

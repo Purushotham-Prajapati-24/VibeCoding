@@ -2,6 +2,8 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { parsePhysicsProblem } from '../ai/physicsInterpreter';
 import { analyzeMisconception } from '../ai/misconceptionEngine';
 import { calculateMastery, getExplanation } from '../ai/adaptiveEngine';
+import { useScenario } from '../context/StructuredScenarioContext';
+import { saveSession, loadHistory } from '../analytics/learningTracker'; // Import tracker
 
 const TutorContext = createContext();
 
@@ -17,6 +19,17 @@ export const TutorProvider = ({ children }) => {
     const [activeMisconception, setActiveMisconception] = useState(null);
     const [mode, setMode] = useState('simulation'); // 'simulation', 'quiz', 'explainer'
 
+    const { loadScenario } = useScenario();
+
+    // Load history on mount
+    useEffect(() => {
+        const savedHistory = loadHistory();
+        if (savedHistory && savedHistory.length > 0) {
+            setHistory(savedHistory);
+            setMastery(calculateMastery(savedHistory));
+        }
+    }, []);
+
     // Actions
     const solveProblem = async (text) => {
         setIsProcessing(true);
@@ -24,25 +37,33 @@ export const TutorProvider = ({ children }) => {
 
         const result = await parsePhysicsProblem(text);
 
+        // Update Central Physics Store
+        loadScenario(result);
+
         setLastInterpretation(result);
         setIsProcessing(false);
         return result;
     };
 
     const recordAttempt = (attempt) => {
-        // attempt: { prediction, outcome, correct: boolean }
+        // attempt: { prediction, outcome, correct: boolean, misconception?: object }
         const newHistory = [...history, attempt];
         setHistory(newHistory);
+        saveSession(newHistory); // Persist
 
         // Update Mastery
         const newMastery = calculateMastery(newHistory);
         setMastery(newMastery);
 
+
         // Check for Misconceptions
         if (!attempt.correct) {
-            const misconception = analyzeMisconception(attempt.prediction, attempt.outcome);
+            // Use pre-calculated misconception if available, otherwise analyze
+            const misconception = attempt.misconception || analyzeMisconception(attempt.prediction, attempt.outcome);
+
             if (misconception) {
                 setActiveMisconception(misconception);
+                // We could also log this to a persistent analytics store here
             }
         }
     };

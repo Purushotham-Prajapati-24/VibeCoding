@@ -3,12 +3,14 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { generateChallenge } from './ChallengeGenerator';
 import { useTutor } from '@/tutor/TutorContext'; // Reusing context for global state if needed or just local
 import { Loader2, Zap, Brain, Trophy, ArrowRight, RefreshCw } from 'lucide-react';
+import { useSound } from '../components/Audio/SoundManager.jsx';
 
 const ChallengeMode = ({ isOpen, onClose, onApplyParams }) => {
     const [challenge, setChallenge] = useState(null);
     const [loading, setLoading] = useState(false);
     const [phase, setPhase] = useState('start'); // start, question, simulation, success
     const [selectedOption, setSelectedOption] = useState(null);
+    const { play } = useSound();
 
     const loadNewChallenge = async () => {
         setLoading(true);
@@ -31,6 +33,7 @@ const ChallengeMode = ({ isOpen, onClose, onApplyParams }) => {
     const handleSubmit = () => {
         const isCorrect = challenge.options.find(o => o.id === selectedOption)?.correct;
         if (isCorrect) {
+            play('success');
             // "Correct prediction! Now prove it in the sim."
         }
 
@@ -67,7 +70,7 @@ const ChallengeMode = ({ isOpen, onClose, onApplyParams }) => {
                 ) : challenge ? (
                     <div className="relative z-10">
                         {/* Header */}
-                        <div className="p-8 bg-gradient-to-br from-slate-900 via-slate-900 to-purple-900/20 border-b border-slate-800">
+                        <div className="p-8 bg-linear-to-br from-slate-900 via-slate-900 to-purple-900/20 border-b border-slate-800">
                             <div className="flex items-center gap-3 mb-2">
                                 <span className="bg-purple-500/20 text-purple-300 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border border-purple-500/30">
                                     AI Challenge
@@ -121,7 +124,7 @@ const ChallengeMode = ({ isOpen, onClose, onApplyParams }) => {
                                 <button
                                     disabled={!selectedOption}
                                     onClick={handleSubmit} // This would ideally close and set params
-                                    className="px-8 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-bold shadow-lg shadow-purple-900/30 disabled:opacity-50 hover:scale-105 transition-transform flex items-center gap-2"
+                                    className="px-8 py-2 bg-linear-to-r from-blue-600 to-purple-600 text-white rounded-xl font-bold shadow-lg shadow-purple-900/30 disabled:opacity-50 hover:scale-105 transition-transform flex items-center gap-2"
                                 >
                                     Locked In <ArrowRight size={16} />
                                 </button>

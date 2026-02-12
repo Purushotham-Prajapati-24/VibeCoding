@@ -1,38 +1,82 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTutor } from './TutorContext';
+import { useScenario } from '../context/StructuredScenarioContext';
+import { analyzeMisconception } from '../ai/misconceptionEngine';
+import { getExplanation } from '../ai/adaptiveEngine';
+import { Check, X, ArrowRight, BrainCircuit } from 'lucide-react';
+
+const PREDICTION_TYPES = [
+    { id: 'range', label: 'Range (Distance)', unit: 'm', key: 'range' },
+    { id: 'maxHeight', label: 'Maximum Height', unit: 'm', key: 'maxHeight' },
+    { id: 'timeOfFlight', label: 'Time of Flight', unit: 's', key: 'timeOfFlight' }
+];
 
 const QuizEngine = ({ onComplete }) => {
     const { recordAttempt } = useTutor();
-    const [answer, setAnswer] = useState(null);
-    const [submitted, setSubmitted] = useState(false);
+    const { scenario } = useScenario();
 
-    // Mock Question for now (This would be dynamic based on scenario)
-    const question = {
-        text: "If we double the mass of the ball, how will the time to hit the ground change?",
-        options: [
-            { id: 'a', text: "It will fall faster (half the time)" },
-            { id: 'b', text: "It will stay the same", correct: true },
-            { id: 'c', text: "It will fall slower (double the time)" }
-        ]
-    };
+    // State
+    const [targetVar, setTargetVar] = useState(PREDICTION_TYPES[0]);
+    const [userValue, setUserValue] = useState(0);
+    const [submitted, setSubmitted] = useState(false);
+    const [result, setResult] = useState(null);
+
+    // Initialize slider to something reasonable to start
+    useEffect(() => {
+        if (scenario.derivedValues[targetVar.key]) {
+            // Start the guess at 50% of actual to allow room to move
+            setUserValue(Math.round(scenario.derivedValues[targetVar.key] * 0.5));
+        }
+    }, [targetVar, scenario.derivedValues]);
 
     const handleSubmit = () => {
-        if (!answer) return;
         setSubmitted(true);
+        const actual = scenario.derivedValues[targetVar.key];
+        const errorMargin = Math.abs((userValue - actual) / actual);
+        const isCorrect = errorMargin < 0.15; // 15% tolerance
 
-        const isCorrect = answer.correct;
+        // Construct Prediction Object for AI Analysis
+        const predictionObj = {
+            [targetVar.key]: userValue,
+            mass: 10, // Assumption for now unless we add mass slider
+            ...scenario.parameters
+        };
 
-        // Record Attempt
+        // Construct Actual Object
+        const actualObj = {
+            ...scenario.derivedValues,
+            ...scenario.parameters
+        };
+
+        // 🧠 AI Analysis
+        const misconception = analyzeMisconception(predictionObj, actualObj);
+
+        // 📚 Adaptive Explanation
+        const explanation = getExplanation(
+            misconception ? misconception.id : targetVar.key,
+            'beginner' // outcome.mastery can go here later
+        );
+
+        const resultData = {
+            isCorrect,
+            actual,
+            error: Math.round(errorMargin * 100),
+            misconception,
+            explanation
+        };
+
+        setResult(resultData);
+
+        // Record to Global Tutor Context
         recordAttempt({
-            prediction: { mass: 2, time: 'same' }, // varied
-            outcome: { time: 'same' }, // varied
-            correct: isCorrect
+            type: 'prediction',
+            variable: targetVar.id,
+            prediction: userValue,
+            actual: actual,
+            correct: isCorrect,
+            timestamp: Date.now()
         });
-
-        setTimeout(() => {
-            onComplete && onComplete();
-        }, 1500);
     };
 
     return (
@@ -40,51 +84,97 @@ const QuizEngine = ({ onComplete }) => {
             <motion.div
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.9 }}
-                className="bg-slate-900/90 backdrop-blur-xl border border-blue-500/30 p-6 rounded-2xl shadow-2xl"
+                className="bg-slate-900/95 backdrop-blur-xl border border-indigo-500/30 p-6 rounded-2xl shadow-2xl overflow-hidden relative"
             >
-                <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-                    <span className="text-2xl">🤔</span>
-                    Predict the Outcome
-                </h3>
-
-                <p className="text-slate-300 mb-6 text-lg">{question.text}</p>
-
-                <div className="space-y-3">
-                    {question.options.map((opt) => (
-                        <button
-                            key={opt.id}
-                            onClick={() => !submitted && setAnswer(opt)}
-                            className={`w-full p-4 rounded-xl text-left transition-all border ${answer?.id === opt.id
-                                    ? 'bg-blue-600 border-blue-400 text-white shadow-lg shadow-blue-500/20'
-                                    : 'bg-slate-800/50 border-slate-700 text-slate-400 hover:bg-slate-800 hover:border-slate-600'
-                                } ${submitted && opt.correct ? 'bg-green-500/20 border-green-500 text-green-200' : ''}
-                              ${submitted && answer?.id === opt.id && !opt.correct ? 'bg-red-500/20 border-red-500 text-red-200' : ''}
-                            `}
-                        >
-                            {opt.text}
-                        </button>
-                    ))}
+                {/* Header */}
+                <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                        <BrainCircuit className="text-indigo-400" />
+                        Predict-Then-See
+                    </h3>
+                    <div className="flex gap-2">
+                        {PREDICTION_TYPES.map(type => (
+                            <button
+                                key={type.id}
+                                onClick={() => !submitted && setTargetVar(type)}
+                                className={`text-xs px-2 py-1 rounded-md transition-colors ${targetVar.id === type.id
+                                        ? 'bg-indigo-600 text-white'
+                                        : 'bg-slate-800 text-slate-400 hover:text-white'
+                                    }`}
+                                disabled={submitted}
+                            >
+                                {type.label.split(' ')[0]}
+                            </button>
+                        ))}
+                    </div>
                 </div>
 
-                <div className="mt-6 flex justify-end">
-                    {!submitted && (
+                {/* Question */}
+                <p className="text-slate-300 mb-8 text-lg text-center">
+                    Based on current settings, what will be the <span className="text-indigo-400 font-bold">{targetVar.label}</span>?
+                </p>
+
+                {/* Input Slider */}
+                <div className="mb-8 px-4">
+                    <div className="flex justify-between text-slate-400 text-sm mb-2">
+                        <span>0 {targetVar.unit}</span>
+                        <span className="text-white font-mono text-xl">{userValue} {targetVar.unit}</span>
+                        <span>{Math.round(scenario.derivedValues[targetVar.key] * 2)} {targetVar.unit}</span>
+                    </div>
+                    <input
+                        type="range"
+                        min="0"
+                        max={Math.round(scenario.derivedValues[targetVar.key] * 2) || 100}
+                        step="0.1"
+                        value={userValue}
+                        onChange={(e) => !submitted && setUserValue(parseFloat(e.target.value))}
+                        disabled={submitted}
+                        className="w-full h-3 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-indigo-500 hover:accent-indigo-400 transition-all"
+                    />
+                </div>
+
+                {/* Action / Result Area */}
+                <div className="flex justify-end items-center">
+                    {!submitted ? (
                         <button
                             onClick={handleSubmit}
-                            disabled={!answer}
-                            className="bg-blue-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            className="bg-indigo-600 hover:bg-indigo-500 text-white px-8 py-3 rounded-xl font-bold flex items-center gap-2 transition-all shadow-lg shadow-indigo-500/25"
                         >
-                            Lock In Answer
+                            Lock In Prediction <ArrowRight size={18} />
                         </button>
-                    )}
-                    {submitted && (
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            className="text-center w-full text-slate-300 font-medium"
-                        >
-                            {answer.correct ? "🎉 Correct! Gravity is independent of mass." : "Running calibration..."}
-                        </motion.div>
+                    ) : (
+                        <div className="w-full animate-in fade-in slide-in-from-bottom-4 duration-500">
+                            <div className={`p-4 rounded-xl mb-4 border ${result.isCorrect ? 'bg-green-500/10 border-green-500/30' : 'bg-red-500/10 border-red-500/30'}`}>
+                                <div className="flex items-center gap-3 mb-2">
+                                    {result.isCorrect ? <Check className="text-green-400" /> : <X className="text-red-400" />}
+                                    <span className={`font-bold ${result.isCorrect ? 'text-green-400' : 'text-red-400'}`}>
+                                        {result.isCorrect ? "Excellent Estimation!" : "Not quite there."}
+                                    </span>
+                                </div>
+                                <div className="text-slate-300 text-sm">
+                                    Actual {targetVar.label}: <span className="text-white font-mono">{result.actual} {targetVar.unit}</span>
+                                    <br />
+                                    Difference: {result.error}%
+                                </div>
+                            </div>
+
+                            {/* AI Feedback */}
+                            <div className="bg-slate-800/50 p-4 rounded-xl border border-white/5">
+                                <h4 className="text-indigo-300 text-xs uppercase font-bold mb-1 tracking-wider">AI Analysis</h4>
+                                <p className="text-slate-300 text-sm leading-relaxed">
+                                    {result.misconception
+                                        ? <span className="text-amber-400 font-bold block mb-1">⚠️ {result.misconception.correction}</span>
+                                        : result.explanation}
+                                </p>
+                            </div>
+
+                            <button
+                                onClick={onComplete}
+                                className="w-full mt-4 bg-slate-700 hover:bg-slate-600 text-white py-3 rounded-lg font-medium transition-colors"
+                            >
+                                See Simulation
+                            </button>
+                        </div>
                     )}
                 </div>
             </motion.div>

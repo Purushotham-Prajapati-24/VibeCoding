@@ -12,28 +12,30 @@ if (API_KEY) {
 
 // System prompt for physics extraction
 const SYSTEM_PROMPT = `
-You are a precise physics problem interpreter. 
-Extract the following parameters from the natural language input:
-- velocity (in m/s)
-- angle (in degrees)
-- gravity (value in m/s^2) - Detect "Mars", "Moon", "Jupiter", or default to Earth (9.81)
-- objectType (string) - What is being thrown?
+You are a precise physics problem interpreter.
+Extract the following parameters from the natural language input.
 
-Respond ONLY with valid JSON. No markdown formatting.
+You must output VALID JSON only. No markdown formatting.
 Schema:
 {
-  "velocity": number,
-  "angle": number,
-  "gravity": number,
-  "planet": "Earth" | "Mars" | "Moon" | "Jupiter",
-  "object": string
+  "scenarioType": "projectile_motion" | "free_fall" | "incline_plane",
+  "object": "string",
+  "parameters": {
+    "initialVelocity": number, // m/s
+    "angle": number, // degrees
+    "gravity": number // m/s^2
+  },
+  "environment": "Earth" | "Mars" | "Moon" | "Jupiter",
+  "requestedOutputs": ["visualize", "maximum_height", "range", "time_of_flight"],
+  "assumptions": ["string"], // e.g., "Assumed 45 degrees since angle not specified"
+  "confidenceScore": number // 0.0 to 1.0
 }
 `;
 
 /**
  * Parses natural language input to extract physics parameters.
- * @param {string} text - User's physics problem (e.g., "Launch a ball at 50 m/s on Mars")
- * @returns {Promise<object>} - Extracted parameters
+ * @param {string} text - User's physics problem
+ * @returns {Promise<object>} - Extracted parameters matching schema
  */
 export const parsePhysicsProblem = async (text) => {
     // 1. Mock Mode (if no API key)
@@ -49,12 +51,13 @@ export const parsePhysicsProblem = async (text) => {
             `Input: "${text}"`
         ]);
         const response = await result.response;
-        const jsonString = response.text().replace(/```json|```/g, '').trim();
+        const textResponse = response.text();
+        // Clean markdown code blocks if present
+        const jsonString = textResponse.replace(/^```json\s*|\s*```$/g, '').trim();
         return JSON.parse(jsonString);
 
     } catch (error) {
         console.error("Gemini Interpretation Failed:", error);
-        // Fallback to mock/regex if AI fails
         return mockParse(text);
     }
 };
@@ -64,25 +67,31 @@ const mockParse = (text) => {
     const lower = text.toLowerCase();
 
     // Velocity
-    const velMatch = text.match(/(\\d+)\\s*(m\/s|km\/h|mph)/i) || text.match(/(\\d+)\\s*velocity/i);
-    let velocity = velMatch ? parseFloat(velMatch[1]) : 20; // default
+    const velMatch = text.match(/(\d+)\s*(m\/s|km\/h|mph)/i) || text.match(/(\d+)\s*velocity/i);
+    let initialVelocity = velMatch ? parseFloat(velMatch[1]) : 20;
 
     // Angle
-    const angleMatch = text.match(/(\\d+)\\s*(degree|deg|°)/i);
-    let angle = angleMatch ? parseFloat(angleMatch[1]) : 45; // default
+    const angleMatch = text.match(/(\d+)\s*(degree|deg|°)/i);
+    let angle = angleMatch ? parseFloat(angleMatch[1]) : 45;
 
     // Planet
     let gravity = 9.81;
-    let planet = "Earth";
-    if (lower.includes("mars")) { gravity = 3.71; planet = "Mars"; }
-    else if (lower.includes("moon")) { gravity = 1.62; planet = "Moon"; }
-    else if (lower.includes("jupiter")) { gravity = 24.79; planet = "Jupiter"; }
+    let environment = "Earth";
+    if (lower.includes("mars")) { gravity = 3.71; environment = "Mars"; }
+    else if (lower.includes("moon")) { gravity = 1.62; environment = "Moon"; }
+    else if (lower.includes("jupiter")) { gravity = 24.79; environment = "Jupiter"; }
 
     return {
-        velocity,
-        angle,
-        gravity,
-        planet,
-        object: "ball"
+        scenarioType: "projectile_motion",
+        object: "ball",
+        parameters: {
+            initialVelocity,
+            angle,
+            gravity
+        },
+        environment,
+        requestedOutputs: ["visualize"],
+        assumptions: !angleMatch ? ["Assumed 45 degrees since angle not specified"] : [],
+        confidenceScore: 0.85
     };
 };
