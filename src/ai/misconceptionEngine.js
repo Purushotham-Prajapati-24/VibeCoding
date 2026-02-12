@@ -97,3 +97,11 @@ export const analyzeMisconception = (prediction, actual) => {
     return null;
 };
 
+/**
+ * Retrieves a misconception rule by its ID.
+ * @param {string} id 
+ * @returns {object|undefined}
+ */
+export const getMisconceptionById = (id) => {
+    return MISCONCEPTIONS.find(m => m.id === id);
+};

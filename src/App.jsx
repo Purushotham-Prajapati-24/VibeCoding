@@ -7,6 +7,7 @@ import { SoundProvider } from '@/components/Audio/SoundManager.jsx';
 import Home from '@/pages/Home';
 import Explore from '@/pages/Explore';
 import Lab from '@/pages/Lab';
+import ExperimentLayout from '@/experiments/ExperimentLayout';
 import ComparePage from '@/pages/ComparePage';
 import ResearchDashboard from '@/research/ResearchDashboard';
 import { AnimatePresence } from 'framer-motion';
@@ -20,6 +21,8 @@ const AppInner = () => {
         <Route path="/" element={<Home />} />
         <Route path="/explore" element={<Explore />} />
         <Route path="/lab" element={<Lab />} />
+        <Route path="/lab/:experimentId" element={<ExperimentLayout />} />
+
         <Route path="/compare" element={<ComparePage />} />
         <Route path="/research" element={<ResearchDashboard />} />
         <Route path="*" element={<Navigate to="/" replace />} />

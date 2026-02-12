@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { getEngine } from '@/experiments/engines';
 
 // 1. Initial State Template
 const INITIAL_STATE = {
@@ -36,39 +37,32 @@ export const ScenarioProvider = ({ children }) => {
      * DERIVED VALUES ENGINE
      * Automatically re-computes physics metrics when parameters change.
      */
+    /**
+     * DERIVED VALUES ENGINE
+     * Automatically re-computes physics metrics when parameters change.
+     */
     useEffect(() => {
-        const { initialVelocity, angle, gravity } = scenario.parameters;
-        // Basic Validation
-        const v0 = Math.max(0, parseFloat(initialVelocity) || 0);
-        const ang = parseFloat(angle) || 0;
-        const g = Math.max(0.1, parseFloat(gravity) || 9.81); // Prevent division by zero
+        // 1. Identify the active engine
+        const engineType = scenario.scenarioType || 'projectile';
+        const engine = getEngine(engineType);
 
-        const rad = (ang * Math.PI) / 180;
+        if (!engine) {
+            console.warn(`No physics engine found for ${engineType}`);
+            return;
+        }
 
-        const vx = v0 * Math.cos(rad);
-        const vy = v0 * Math.sin(rad);
+        // 2. Calculate Derived Values
+        const results = engine.calculate(scenario.parameters);
 
-        // Projectile Motion Equations
-        const timeToApex = vy / g;
-        const totalTime = 2 * timeToApex;
-        const maxHeight = (vy * vy) / (2 * g);
-        const range = vx * totalTime;
-
+        // 3. Update State
         setScenario(prev => ({
             ...prev,
-            derivedValues: {
-                timeOfFlight: parseFloat(totalTime.toFixed(2)),
-                maxHeight: parseFloat(maxHeight.toFixed(2)),
-                range: parseFloat(range.toFixed(2)),
-                vx: parseFloat(vx.toFixed(2)),
-                vy: parseFloat(vy.toFixed(2))
-            }
+            derivedValues: { ...prev.derivedValues, ...results }
         }));
 
     }, [
-        scenario.parameters.initialVelocity,
-        scenario.parameters.angle,
-        scenario.parameters.gravity
+        scenario.parameters, // Deep dependency check not ideal, but works for now
+        scenario.scenarioType
     ]);
 
     /**

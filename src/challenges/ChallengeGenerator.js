@@ -25,7 +25,7 @@ Schema:
   },
   "question": "String (The prediction question)",
   "options": [
-    { "id": "A", "text": "String", "correct": Boolean },
+    { "id": "A", "text": "String", "correct": Boolean, "misconceptionId": "String (Optional ID from: mass_affects_fall, apex_velocity_zero, acceleration_at_apex, 45_degree_optimal)" },
     { "id": "B", "text": "String", "correct": Boolean },
     { "id": "C", "text": "String", "correct": Boolean }
   ],
@@ -52,32 +52,25 @@ const generateMockChallenge = () => {
   // 1. Randomize Environment
   const planet = PLANETS[Math.floor(Math.random() * PLANETS.length)];
   const distance = 50 + Math.floor(Math.random() * 200); // 50m to 250m
-  const scenarioAction = SCENARIOS[Math.floor(Math.random() * SCENARIOS.length)];
 
-  // 2. Physics Calculation (Reverse Engineering)
-  // We want a solvable problem. Let's pick a logical 45 degree shot for max range logic
-  // Range = (v^2 * sin(2theta)) / g
-  // Let's fix 45 degrees as the 'optimal' answer for distance optimization questions
-  // So required v0 = sqrt(distance * g)
-
-  const requiredV0 = Math.sqrt(distance * planet.g);
-  const v0Display = Math.round(requiredV0);
+  // 2. Scenario: Cliff Launch (to make 45 degrees wrong)
+  const cliffHeight = 50;
 
   // 3. Construct the "AI" Response
   return {
-    title: `${planet.name} ${scenarioAction.split(' ')[0]} Mission`,
-    scenario: `You are on ${planet.name} (${planet.g} m/s²). You need to ${scenarioAction} ${distance}m away. precise calculation is required.`,
+    title: `${planet.name} Cliff Launch`,
+    scenario: `You are on ${planet.name} (${planet.g} m/s²) standing on a ${cliffHeight}m tall cliff. You need to hit a target ${distance}m away.`,
     planet: planet.name,
     gravity: planet.g,
     targetDistance: distance,
     constraints: { v0_min: 10, v0_max: 100, angle_min: 0, angle_max: 90 },
-    question: `To hit exactly ${distance}m with a launch speed of ${v0Display} m/s, what implies the optimal launch angle for maximum efficiency?`,
+    question: `For a launch from a height of ${cliffHeight}m, which angle will give the maximum range?`,
     options: [
-      { id: "A", text: "30 degrees", correct: false },
-      { id: "B", text: "45 degrees", correct: true }, // Simplified logic for mock
-      { id: "C", text: "60 degrees", correct: false }
+      { id: "A", "text": "Less than 45° (e.g., ~35°)", "correct": true },
+      { id: "B", "text": "Exactly 45°", "correct": false, "misconceptionId": "45_degree_optimal" },
+      { id: "C", "text": "More than 45° (e.g., ~55°)", "correct": false }
     ],
-    hint: `Remember that 45° yields the maximum range in a vacuum interaction.`
+    hint: `When launching from a height, do you want to spend more energy on horizontal or vertical speed?`
   };
 };
 

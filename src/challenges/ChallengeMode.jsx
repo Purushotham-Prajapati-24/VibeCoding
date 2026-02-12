@@ -1,15 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { generateChallenge } from './ChallengeGenerator';
-import { useTutor } from '@/tutor/TutorContext'; // Reusing context for global state if needed or just local
-import { Loader2, Zap, Brain, Trophy, ArrowRight, RefreshCw } from 'lucide-react';
-import { useSound } from '../components/Audio/SoundManager.jsx';
+import { getMisconceptionById } from '@/ai/misconceptionEngine';
+import { getExplanation } from '@/ai/adaptiveEngine';
 
 const ChallengeMode = ({ isOpen, onClose, onApplyParams }) => {
     const [challenge, setChallenge] = useState(null);
     const [loading, setLoading] = useState(false);
     const [phase, setPhase] = useState('start'); // start, question, simulation, success
     const [selectedOption, setSelectedOption] = useState(null);
+    const [feedback, setFeedback] = useState(null);
     const { play } = useSound();
 
     const loadNewChallenge = async () => {
@@ -19,6 +16,7 @@ const ChallengeMode = ({ isOpen, onClose, onApplyParams }) => {
         setLoading(false);
         setPhase('question');
         setSelectedOption(null);
+        setFeedback(null);
     };
 
     // Initial load
@@ -28,25 +26,51 @@ const ChallengeMode = ({ isOpen, onClose, onApplyParams }) => {
         }
     }, [isOpen]);
 
-    const handleOptionSelect = (id) => setSelectedOption(id);
+    const handleOptionSelect = (id) => {
+        setSelectedOption(id);
+        setFeedback(null); // Clear feedback on new selection
+    };
 
     const handleSubmit = () => {
-        const isCorrect = challenge.options.find(o => o.id === selectedOption)?.correct;
+        const selected = challenge.options.find(o => o.id === selectedOption);
+        const isCorrect = selected?.correct;
+
         if (isCorrect) {
             play('success');
-            // "Correct prediction! Now prove it in the sim."
-        }
+            setFeedback({
+                type: 'success',
+                message: "Physics Model Aligned!",
+                detail: "Your prediction matches the simulation. Initializing launch sequence..."
+            });
+        } else {
+            play('click');
+            let detail = "";
 
+            if (selected?.misconceptionId) {
+                const m = getMisconceptionById(selected.misconceptionId);
+                detail = m ? `${m.correction} ${m.explanation}` : getExplanation('projectile_motion', 'beginner');
+            } else {
+                detail = `That answer implies a different physics model. ${getExplanation('projectile_motion', 'beginner')}`;
+            }
+
+            setFeedback({
+                type: 'error',
+                message: "Misconception Detected",
+                detail: detail
+            });
+        }
+    };
+
+    const handleProceed = () => {
         // Apply physics parameters to the lab
         if (onApplyParams) {
             onApplyParams({
                 gravity: challenge.gravity,
                 label: challenge.planet,
                 v0: 20, // Default start
-                angle: 45 // Default start
+                angle: 45 // Default start (Simulation will clarify the real optimal)
             });
         }
-
         setPhase('simulation');
     };
 
@@ -83,29 +107,47 @@ const ChallengeMode = ({ isOpen, onClose, onApplyParams }) => {
                             <p className="text-slate-400 text-lg leading-relaxed">{challenge.scenario}</p>
                         </div>
 
-                        {/* Question Content */}
+                        {/* Content: Questions or Feedback */}
                         <div className="p-8 space-y-6">
-                            <div className="flex items-start gap-4 p-4 bg-slate-800/50 rounded-xl border border-slate-700">
-                                <Brain className="text-purple-400 shrink-0 mt-1" />
-                                <div>
-                                    <h3 className="text-lg font-semibold text-white mb-2">Prediction Phase</h3>
-                                    <p className="text-slate-300">{challenge.question}</p>
-                                </div>
-                            </div>
+                            {!feedback ? (
+                                <>
+                                    <div className="flex items-start gap-4 p-4 bg-slate-800/50 rounded-xl border border-slate-700">
+                                        <Brain className="text-purple-400 shrink-0 mt-1" />
+                                        <div>
+                                            <h3 className="text-lg font-semibold text-white mb-2">Prediction Phase</h3>
+                                            <p className="text-slate-300">{challenge.question}</p>
+                                        </div>
+                                    </div>
 
-                            <div className="grid grid-cols-1 gap-3">
-                                {challenge.options.map(opt => (
-                                    <button
-                                        key={opt.id}
-                                        onClick={() => handleOptionSelect(opt.id)}
-                                        className={`p-4 rounded-xl border text-left transition-all ${selectedOption === opt.id
-                                            ? 'bg-purple-600 border-purple-400 text-white shadow-lg shadow-purple-900/50'
-                                            : 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-750 hover:border-slate-600'}`}
-                                    >
-                                        <span className="font-bold mr-2">{opt.id}.</span> {opt.text}
-                                    </button>
-                                ))}
-                            </div>
+                                    <div className="grid grid-cols-1 gap-3">
+                                        {challenge.options.map(opt => (
+                                            <button
+                                                key={opt.id}
+                                                onClick={() => handleOptionSelect(opt.id)}
+                                                className={`p-4 rounded-xl border text-left transition-all ${selectedOption === opt.id
+                                                    ? 'bg-purple-600 border-purple-400 text-white shadow-lg shadow-purple-900/50'
+                                                    : 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-750 hover:border-slate-600'}`}
+                                            >
+                                                <span className="font-bold mr-2">{opt.id}.</span> {opt.text}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </>
+                            ) : (
+                                <motion.div
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    className={`p-6 rounded-2xl border ${feedback.type === 'success' ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-red-500/10 border-red-500/30'}`}
+                                >
+                                    <div className="flex items-center gap-3 mb-3">
+                                        {feedback.type === 'success' ? <Trophy className="text-emerald-400" /> : <Brain className="text-red-400" />}
+                                        <h3 className={`text-xl font-bold ${feedback.type === 'success' ? 'text-emerald-400' : 'text-red-400'}`}>
+                                            {feedback.message}
+                                        </h3>
+                                    </div>
+                                    <p className="text-slate-300 leading-relaxed text-lg">{feedback.detail}</p>
+                                </motion.div>
+                            )}
                         </div>
 
                         {/* Footer */}
@@ -121,13 +163,24 @@ const ChallengeMode = ({ isOpen, onClose, onApplyParams }) => {
                                 <button onClick={onClose} className="px-6 py-2 text-slate-400 hover:text-white font-medium">
                                     Close
                                 </button>
-                                <button
-                                    disabled={!selectedOption}
-                                    onClick={handleSubmit} // This would ideally close and set params
-                                    className="px-8 py-2 bg-linear-to-r from-blue-600 to-purple-600 text-white rounded-xl font-bold shadow-lg shadow-purple-900/30 disabled:opacity-50 hover:scale-105 transition-transform flex items-center gap-2"
-                                >
-                                    Locked In <ArrowRight size={16} />
-                                </button>
+
+                                {!feedback ? (
+                                    <button
+                                        disabled={!selectedOption}
+                                        onClick={handleSubmit}
+                                        className="px-8 py-2 bg-linear-to-r from-blue-600 to-purple-600 text-white rounded-xl font-bold shadow-lg shadow-purple-900/30 disabled:opacity-50 hover:scale-105 transition-transform flex items-center gap-2"
+                                    >
+                                        Locked In <ArrowRight size={16} />
+                                    </button>
+                                ) : (
+                                    <button
+                                        onClick={handleProceed}
+                                        className={`px-8 py-2 text-white rounded-xl font-bold shadow-lg hover:scale-105 transition-transform flex items-center gap-2 ${feedback.type === 'success' ? 'bg-emerald-600 shadow-emerald-900/30' : 'bg-slate-700 hover:bg-slate-600'
+                                            }`}
+                                    >
+                                        Run Simulation <Zap size={16} />
+                                    </button>
+                                )}
                             </div>
                         </div>
                     </div>

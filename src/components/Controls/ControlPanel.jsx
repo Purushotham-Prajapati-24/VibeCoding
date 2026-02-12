@@ -26,7 +26,8 @@ const ControlPanel = ({
     isRunning, hasLanded,
     onReplay, onExplain, onReel,
     // Compare Mode Props
-    compareMode, paramsB, setParamsB, setSharedParams
+    compareMode, paramsB, setParamsB, setSharedParams,
+    experimentId // <-- New Prop
 }) => {
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const [dropdownBOpen, setDropdownBOpen] = useState(false);
@@ -165,38 +166,96 @@ const ControlPanel = ({
 
             {/* Shared Launch Parameters */}
             <div className="space-y-4 flex-1">
-                <div className="p-3 bg-slate-800/50 rounded-xl border border-slate-700/50 space-y-3">
-                    <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider">Launch Parameters {compareMode && '(Shared)'}</h3>
-                    <div className="space-y-1.5">
-                        <label className="text-sm text-slate-400 flex justify-between">
-                            <span className="flex items-center gap-1"><Zap size={12} className="text-blue-400" /> Initial Velocity (v0)</span>
-                            <span className="text-blue-400 font-mono">{params.v0} m/s</span>
-                        </label>
-                        <input
-                            type="range"
-                            name="v0"
-                            min="0" max="100" step="1"
-                            value={params.v0}
-                            onChange={handleChange}
-                            className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-blue-500"
-                        />
-                    </div>
 
-                    <div className="space-y-1.5">
-                        <label className="text-sm text-slate-400 flex justify-between">
-                            <span className="flex items-center gap-1"><Compass size={12} className="text-purple-400" /> Launch Angle (θ)</span>
-                            <span className="text-purple-400 font-mono">{params.angle}°</span>
-                        </label>
-                        <input
-                            type="range"
-                            name="angle"
-                            min="0" max="90" step="1"
-                            value={params.angle}
-                            onChange={handleChange}
-                            className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-purple-500"
-                        />
+                {/* Experiment Specific Controls */}
+                {experimentId === 'pendulum' ? (
+                    // PENDULUM CONTROLS
+                    <div className="p-3 bg-slate-800/50 rounded-xl border border-slate-700/50 space-y-3">
+                        <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider">Pendulum Params</h3>
+
+                        {/* Length */}
+                        <div className="space-y-1.5">
+                            <label className="text-sm text-slate-400 flex justify-between">
+                                <span className="flex items-center gap-1"><SlidersHorizontal size={12} className="text-blue-400" /> Length (L)</span>
+                                <span className="text-blue-400 font-mono">{params.length} m</span>
+                            </label>
+                            <input
+                                type="range"
+                                name="length"
+                                min="0.1" max="5" step="0.1"
+                                value={params.length || 1}
+                                onChange={handleChange}
+                                className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-blue-500"
+                            />
+                        </div>
+
+                        {/* Mass */}
+                        <div className="space-y-1.5">
+                            <label className="text-sm text-slate-400 flex justify-between">
+                                <span className="flex items-center gap-1"><CircleDot size={12} className="text-purple-400" /> Mass (m)</span>
+                                <span className="text-purple-400 font-mono">{params.mass} kg</span>
+                            </label>
+                            <input
+                                type="range"
+                                name="mass"
+                                min="0.1" max="10" step="0.1"
+                                value={params.mass || 1}
+                                onChange={handleChange}
+                                className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-purple-500"
+                            />
+                        </div>
+
+                        {/* Amplitude */}
+                        <div className="space-y-1.5">
+                            <label className="text-sm text-slate-400 flex justify-between">
+                                <span className="flex items-center gap-1"><RotateCcw size={12} className="text-yellow-400" /> Amplitude</span>
+                                <span className="text-yellow-400 font-mono">{params.amplitude}°</span>
+                            </label>
+                            <input
+                                type="range"
+                                name="amplitude"
+                                min="1" max="90" step="1"
+                                value={params.amplitude || 15}
+                                onChange={handleChange}
+                                className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-yellow-500"
+                            />
+                        </div>
                     </div>
-                </div>
+                ) : (
+                    // PROJECTILE CONTROLS (Default)
+                    <div className="p-3 bg-slate-800/50 rounded-xl border border-slate-700/50 space-y-3">
+                        <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider">Launch Parameters {compareMode && '(Shared)'}</h3>
+                        <div className="space-y-1.5">
+                            <label className="text-sm text-slate-400 flex justify-between">
+                                <span className="flex items-center gap-1"><Zap size={12} className="text-blue-400" /> Initial Velocity (v0)</span>
+                                <span className="text-blue-400 font-mono">{params.v0} m/s</span>
+                            </label>
+                            <input
+                                type="range"
+                                name="v0"
+                                min="0" max="100" step="1"
+                                value={params.v0}
+                                onChange={handleChange}
+                                className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-blue-500"
+                            />
+                        </div>
+
+                        <div className="space-y-1.5">
+                            <label className="text-sm text-slate-400 flex justify-between">
+                                <span className="flex items-center gap-1"><Compass size={12} className="text-purple-400" /> Launch Angle (θ)</span>
+                                <span className="text-purple-400 font-mono">{params.angle}°</span>
+                            </label>
+                            <input
+                                type="range"
+                                name="angle"
+                                min="0" max="90" step="1"
+                                value={params.angle}
+                                onChange={handleChange}
+                                className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-purple-500"
+                            />
+                        </div>
+                    </div>
+                )}
 
                 {/* World A Controls */}
                 <div className={`p-3 bg-slate-800/50 rounded-xl border border-slate-700/50 space-y-3 ${compareMode ? 'border-l-4 border-l-blue-500' : ''}`}>
@@ -221,13 +280,13 @@ const ControlPanel = ({
                     <div className="space-y-1.5">
                         <label className="text-sm text-slate-400 flex justify-between">
                             <span className="flex items-center gap-1"><Wind size={12} className="text-rose-400" /> Air Resistance</span>
-                            <span className="text-rose-400 font-mono">{params.drag === 0 ? 'Off' : params.drag.toFixed(2)}</span>
+                            <span className="text-rose-400 font-mono">{params.drag === 0 ? 'Off' : params.drag ? params.drag.toFixed(2) : 0}</span>
                         </label>
                         <input
                             type="range"
                             name="drag"
                             min="0" max="1" step="0.01"
-                            value={params.drag}
+                            value={params.drag || 0}
                             onChange={handleChange}
                             className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-rose-500"
                         />
