@@ -1,15 +1,17 @@
 import React, { useState, useRef } from 'react';
 import { Player } from '@remotion/player';
-import { ArrowLeft, Play, Layout, Activity, FlaskConical, ChevronDown } from 'lucide-react';
+import { Play, Activity, FlaskConical, ChevronDown, ArrowLeft } from 'lucide-react';
 import ShowcaseComposition from '../remotion/ShowcaseComposition';
 import Navbar from '../components/Navbar';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { useGSAP } from '@gsap/react';
+import { useNavigate } from 'react-router-dom';
 
 gsap.registerPlugin(ScrollTrigger, useGSAP);
 
-const Explore = ({ onBack, onEnterLab }) => {
+const Explore = () => {
+    const navigate = useNavigate();
     const containerRef = useRef(null);
     const playerContainerRef = useRef(null);
     const [frame, setFrame] = useState(0);
@@ -23,7 +25,7 @@ const Explore = ({ onBack, onEnterLab }) => {
             start: "top top",
             end: "bottom bottom",
             pin: playerContainerRef.current,
-            scrub: 1, // Smooth scrubbing
+            scrub: 1,
             onUpdate: (self) => {
                 // Sync Remotion frame with total scroll progress
                 // self.progress is 0 to 1
@@ -54,11 +56,11 @@ const Explore = ({ onBack, onEnterLab }) => {
     }, { scope: containerRef });
 
     return (
-        <div ref={containerRef} className="relative bg-black text-white selection:bg-blue-600/40">
-            <Navbar onDashboard={onEnterLab} onHome={onBack} />
+        <div ref={containerRef} className="relative bg-black text-white selection:bg-blue-600/40 min-h-screen">
+            <Navbar />
 
-            {/* Sticky Remotion Container (Pinned) */}
-            <div ref={playerContainerRef} className="absolute inset-0 z-0 h-screen w-full overflow-hidden">
+            {/* Sticky Remotion Container (Pinned) - pointer-events-none to ensure scroll works */}
+            <div ref={playerContainerRef} className="absolute inset-0 z-0 h-screen w-full overflow-hidden pointer-events-none">
                 <div className="relative w-full h-full">
                     {/* Dynamic Starfield Background */}
                     <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-slate-900 via-[#020617] to-black z-[-1]" />
@@ -82,7 +84,7 @@ const Explore = ({ onBack, onEnterLab }) => {
             </div>
 
             {/* Scrollable Content Buffer - Determines total scroll length */}
-            <div className="relative z-10">
+            <div className="relative z-10 pointer-events-auto">
                 {/* Spacer to allow pinning to work for correct duration */}
                 {/* 4 Sections * 100vh = 400vh scroll distance */}
 
@@ -148,7 +150,7 @@ const Explore = ({ onBack, onEnterLab }) => {
 
                         <div className="flex flex-col sm:flex-row gap-6 justify-center">
                             <button
-                                onClick={onEnterLab}
+                                onClick={() => navigate('/lab')}
                                 className="h-16 px-10 bg-white text-black rounded-full font-black text-lg flex items-center gap-3 hover:scale-110 transition-transform shadow-[0_0_50px_rgba(255,255,255,0.4)]"
                             >
                                 <FlaskConical size={24} />

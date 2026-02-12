@@ -4,11 +4,14 @@ import { ArrowRight, Lock } from 'lucide-react';
 import HeroTeaserComposition from '../remotion/HeroTeaserComposition';
 import MissionSection from '../components/MissionSection';
 import Navbar from '../components/Navbar';
+import { useNavigate } from 'react-router-dom';
 
-const Home = ({ onContinue, onDashboard }) => {
+const Home = () => {
+    const navigate = useNavigate();
+
     return (
         <div className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-blue-500/30">
-            <Navbar onDashboard={onDashboard} onHome={() => window.scrollTo({ top: 0, behavior: 'smooth' })} />
+            <Navbar onDashboard={() => navigate('/lab')} onHome={() => window.scrollTo({ top: 0, behavior: 'smooth' })} />
 
             {/* Hero Section */}
             <main className="relative pt-32 pb-24 overflow-hidden">
@@ -49,7 +52,7 @@ const Home = ({ onContinue, onDashboard }) => {
                             Sign In
                         </button>
                         <button
-                            onClick={onContinue}
+                            onClick={() => navigate('/explore')}
                             className="w-full h-14 bg-slate-900 border border-slate-800 text-white rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-slate-800 transition-all hover:scale-105 active:scale-95 group shadow-xl"
                         >
                             Continue Without Account
