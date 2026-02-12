@@ -75,13 +75,7 @@ Key dependencies included in the project:
 - **Simulation Control:** You can modify parameters (velocity, angle, etc.) using the sliders in the control panel even after the AI has set the initial values.
 - **Responsiveness:** The layout is optimized for desktop and tablet views to accommodate the complex simulation canvas and controls.
 
-## 7. Demo Videos of MVP
-*(Add your interactive demo videos here showing the AI solving a problem)*
-
-> [!TIP]
-> Place your video files in a `demo` folder and link them here using standard markdown video syntax or embed YouTube links.
-
-## 8. Demo Images of MVP
+## 7. Demo Images of MVP
 
 ### 1. Interactive Physics Dashboard
 ![Physics Dashboard](demo/dashboard_view.png)
@@ -109,12 +103,6 @@ Key dependencies included in the project:
 ![Physics Reel](demo/physics_reel.png)
 *Export your simulations as vertical videos ready for social media sharing.*
 
-
-> [!NOTE]
-> Screenshots should demonstrate:
-> 1. The input of a word problem.
-> 2. The resulting simulation (e.g., Projectile Motion).
-> 3. The control panel adjusting parameters.
 
 ---
 **Developed for the Hackathon/Project Submission**
