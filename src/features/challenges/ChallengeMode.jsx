@@ -3,7 +3,7 @@ import { getExplanation } from '@/services/ai/adaptiveEngine';
 import { motion } from 'framer-motion';
 import { Brain, Loader2, RefreshCw, ArrowRight, Zap, Trophy } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { generateChallenge } from './challengeGenerator';
+import { generateChallenge } from './ChallengeGenerator';
 import { useSound } from '@/hooks/useSound';
 
 
